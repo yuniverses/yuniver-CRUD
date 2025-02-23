@@ -104,3 +104,30 @@ exports.addMessage = async (req, res) => {
     res.status(500).json({ message: 'Failed to add message' });
   }
 };
+
+exports.getFlowChart = async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+    res.json(project.flowChart);
+  } catch (err) {
+    console.error('Get flow chart error:', err);
+    res.status(500).json({ message: 'Failed to get flow chart' });
+  }
+};
+
+exports.updateFlowChart = async (req, res) => {
+  try {
+    const flowChart = req.body.flowChart; // 前端傳來的完整 JSON 陣列
+    const project = await Project.findByIdAndUpdate(
+      req.params.id,
+      { flowChart },
+      { new: true }
+    );
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+    res.json({ message: 'Flow chart updated', flowChart: project.flowChart });
+  } catch (err) {
+    console.error('Update flow chart error:', err);
+    res.status(500).json({ message: 'Failed to update flow chart' });
+  }
+};

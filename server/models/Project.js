@@ -24,6 +24,7 @@ const taskSchema = new mongoose.Schema({
   order: Number,     // 用於表示階段順序
 });
 
+
 const projectSchema = new mongoose.Schema({
   clientName: {
     type: String,
@@ -54,6 +55,10 @@ const projectSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  flowChart: {
+    type: Array,
+    default: [] // 儲存流程圖 JSON 資料
+  }
 });
 
 module.exports = mongoose.model('Project', projectSchema);

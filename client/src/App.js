@@ -9,6 +9,8 @@ import ProjectList from './pages/ProjectList';
 import ProjectDetails from './pages/ProjectDetails';
 import ProjectManager from './pages/ProjectManager';
 import QuotationPage from './pages/QuotationPage';
+import CustomFlowChartEditor from './pages/CustomFlowChartEditor';
+import TemplateLibrary from './pages/TemplateLibrary';
 
 // 簡易判斷是否已登入
 const isAuthenticated = () => {
@@ -65,7 +67,9 @@ function App() {
           path="/quotation"
           element={isAuthenticated() ? <QuotationPage /> : <Navigate to="/login" />}
         />
-
+        <Route path="/flowchart-editor/:id" element={isAuthenticated() ? <CustomFlowChartEditor /> : <Navigate to="/login" />} />
+        <Route path="/template-library" element={isAuthenticated() ? <TemplateLibrary /> : <Navigate to="/login" />} />
+        
         {/* 404 處理，或直接導向 /home */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
