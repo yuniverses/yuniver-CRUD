@@ -1,23 +1,24 @@
-import React, { useState } from 'react';
-import { loginUser } from '../api/auth';
+import React, { useState } from "react";
+import { loginUser } from "../api/auth";
 
 function LoginPage() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const data = await loginUser(username, password);
-      localStorage.setItem('token', data.token);
-      window.location.href = '/home'; // 導向首頁或 Dashboard
+      localStorage.setItem("token", data.token);
+
+      window.location.href = "/home"; // 導向首頁或 Dashboard
     } catch (err) {
-      alert('登入失敗：' + (err.response?.data?.message || err.message));
+      alert("登入失敗：" + (err.response?.data?.message || err.message));
     }
   };
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{ padding: "20px" }}>
       <h1>登入</h1>
       <form onSubmit={handleSubmit}>
         <div>

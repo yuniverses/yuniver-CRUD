@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import HomePage from "./pages/HomePage";
@@ -16,20 +17,36 @@ import ProjectManager from "./pages/ProjectManager";
 import QuotationPage from "./pages/QuotationPage";
 import CustomFlowChartEditor from "./pages/CustomFlowChartEditor";
 import TemplateLibrary from "./pages/TemplateLibrary";
-import UserManagement from "./pages/UserManagement"; // 新增身份管理頁面
+import UserManagement from "./pages/UserManagement";
 import ProjectSettings from "./pages/ProjectSettings";
 
-// 簡易判斷是否已登入
+// 簡易判斷是否已登入並取得用戶角色
+const getRole = () => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    const decodedToken = JSON.parse(atob(token.split(".")[1])); // 解碼 JWT Token
+    console.log("Decoded Token:", decodedToken); // 輸出解碼後的 token，檢查 role 是否存在
+    return decodedToken.role || null; // 確保返回角色
+  }
+  return null;
+};
+
+// 角色權限控制函數
+const hasAccess = (role, allowedRoles) => {
+  return allowedRoles.includes(role);
+};
+
 const isAuthenticated = () => {
   const token = localStorage.getItem("token");
-  return !!token;
+  return !!token; // Returns true if token exists
 };
 
 function App() {
+  const role = getRole(); // 取得用戶角色
+
   return (
     <Router>
       <Routes>
-        {/* 未登入時，導向 /login */}
         <Route
           path="/"
           element={
@@ -40,65 +57,91 @@ function App() {
             )
           }
         />
+
         <Route
           path="/login"
-          element={isAuthenticated() ? <Navigate to="/home" /> : <LoginPage />}
+          element={role ? <Navigate to="/home" /> : <LoginPage />}
         />
         <Route
           path="/register"
-          element={
-            isAuthenticated() ? <Navigate to="/home" /> : <RegisterPage />
-          }
+          element={role ? <Navigate to="/home" /> : <RegisterPage />}
         />
 
-        {/* 已登入路由 */}
+        {/* 根據角色控制訪問頁面 */}
         <Route
           path="/home"
-          element={isAuthenticated() ? <HomePage /> : <Navigate to="/login" />}
+          element={
+            hasAccess(role, ["god", "admin", "employee", "customer"]) ? (
+              <HomePage />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
         />
         <Route
           path="/mail"
-          element={isAuthenticated() ? <MailPage /> : <Navigate to="/login" />}
+          element={
+            hasAccess(role, ["god", "admin", "employee"]) ? (
+              <MailPage />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
         />
         <Route
           path="/internal-files"
           element={
-            isAuthenticated() ? <InternalFilesPage /> : <Navigate to="/login" />
+            hasAccess(role, ["god", "admin", "employee"]) ? (
+              <InternalFilesPage />
+            ) : (
+              <Navigate to="/login" />
+            )
           }
         />
         <Route
           path="/projects"
           element={
-            isAuthenticated() ? <ProjectList /> : <Navigate to="/login" />
+            hasAccess(role, ["god", "admin", "employee", "customer"]) ? (
+              <ProjectList />
+            ) : (
+              <Navigate to="/login" />
+            )
           }
         />
         <Route
           path="/projects/:id"
           element={
-            isAuthenticated() ? (
+            hasAccess(role, ["god", "admin", "employee", "customer"]) ? (
               <ProjectDetailsWithFiles />
             ) : (
               <Navigate to="/login" />
             )
           }
         />
-
         <Route
           path="/project-manager"
           element={
-            isAuthenticated() ? <ProjectManager /> : <Navigate to="/login" />
+            hasAccess(role, ["god", "admin"]) ? (
+              <ProjectManager />
+            ) : (
+              <Navigate to="/login" />
+            )
           }
         />
         <Route
           path="/quotation"
           element={
-            isAuthenticated() ? <QuotationPage /> : <Navigate to="/login" />
+            hasAccess(role, ["god", "admin", "employee"]) ? (
+              <QuotationPage />
+            ) : (
+              <Navigate to="/login" />
+            )
           }
         />
         <Route
           path="/flowchart-editor/:id"
           element={
-            isAuthenticated() ? (
+            hasAccess(role, ["god", "admin", "employee", "customer"]) ? (
               <CustomFlowChartEditor />
             ) : (
               <Navigate to="/login" />
@@ -108,23 +151,34 @@ function App() {
         <Route
           path="/template-library"
           element={
-            isAuthenticated() ? <TemplateLibrary /> : <Navigate to="/login" />
+            hasAccess(role, ["god", "admin"]) ? (
+              <TemplateLibrary />
+            ) : (
+              <Navigate to="/login" />
+            )
           }
         />
         <Route
           path="/user-management"
           element={
-            isAuthenticated() ? <UserManagement /> : <Navigate to="/login" />
+            hasAccess(role, ["god", "admin"]) ? (
+              <UserManagement />
+            ) : (
+              <Navigate to="/login" />
+            )
           }
         />
         <Route
           path="/project-settings/:id"
           element={
-            isAuthenticated() ? <ProjectSettings /> : <Navigate to="/login" />
+            hasAccess(role, ["god", "admin"]) ? (
+              <ProjectSettings />
+            ) : (
+              <Navigate to="/login" />
+            )
           }
         />
 
-        {/* 404 處理，或直接導向 /home */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>

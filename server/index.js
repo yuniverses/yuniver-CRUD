@@ -23,7 +23,6 @@ app.use("/uploads", express.static("uploads")); // 靜態提供上傳檔案
 
 // 路由
 app.use("/api/auth", authRoutes);
-app.use("/api/projects", projectRoutes);
 app.use("/api/files", fileRoutes);
 app.use("/api/quotation", quoteRoutes);
 app.use("/api/users", userRoutes); // 新增這行

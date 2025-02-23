@@ -1,19 +1,19 @@
 // server/routes/templateRoutes.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const auth = require('../middlewares/authMiddleware');
+const { auth } = require("../middlewares/authMiddleware"); // 確保是正確的路徑
 const {
   getTemplates,
   getTemplate,
   createTemplate,
   updateTemplate,
   deleteTemplate,
-} = require('../controllers/templateController');
+} = require("../controllers/templateController");
 
-router.get('/', auth, getTemplates);
-router.get('/:id', auth, getTemplate);
-router.post('/', auth, createTemplate);
-router.put('/:id', auth, updateTemplate);
-router.delete('/:id', auth, deleteTemplate);
+router.get("/", auth, getTemplates);
+router.get("/:id", auth, getTemplate);
+router.post("/", auth, createTemplate);
+router.put("/:id", auth, updateTemplate);
+router.delete("/:id", auth, deleteTemplate);
 
 module.exports = router;
