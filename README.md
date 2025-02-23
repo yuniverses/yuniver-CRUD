@@ -1,6 +1,3 @@
-### 📌 **README.md 最終版**
-
-````md
 # 🌟 yuniver-CRUD
 
 **yuniver-CRUD** 是一個基於 **MERN (MongoDB, Express.js, React, Node.js)** 的全端 CRUD 應用，提供 **用戶管理、專案管理、檔案管理、流程圖編輯** 與 **PDF 報價單生成** 等功能。適用於企業內部管理或 CRUD 教學範例。
@@ -30,6 +27,7 @@
 git clone https://github.com/yuniverses/yuniver-CRUD.git
 cd yuniver-CRUD
 ```
+
 ````
 
 ### 3️⃣ **設定環境變數**
@@ -186,3 +184,4 @@ npm start
   - `middlewares/`：JWT 驗證
 
 ---
+````
