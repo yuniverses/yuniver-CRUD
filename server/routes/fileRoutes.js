@@ -131,49 +131,4 @@ router.get("/download/:fileName", auth, (req, res) => {
   }
 });
 
-// 新增線上文件：POST /api/files/document
-router.post("/document", auth, async (req, res) => {
-  try {
-    const { pageId, name, content } = req.body;
-    if (!pageId || !name) {
-      return res.status(400).json({ message: "Missing pageId or name" });
-    }
-    const page = await Page.findById(pageId);
-    if (!page) return res.status(404).json({ message: "Page not found" });
-    const doc = {
-      filename: name, // 使用名稱作為 filename
-      originalname: name,
-      mimetype: "text/plain",
-      size: content ? content.length : 0,
-      content: content || "",
-    };
-    page.files.push(doc);
-    await page.save();
-    // 回傳剛建立的文件，Mongoose 會自動產生 _id
-    res.status(201).json(page.files[page.files.length - 1]);
-  } catch (error) {
-    console.error("Create document error:", error);
-    res.status(500).json({ message: "Failed to create document" });
-  }
-});
-
-// 更新線上文件內容：PUT /api/files/document/:fileId
-router.put("/document/:fileId", auth, async (req, res) => {
-  try {
-    const { fileId } = req.params;
-    const { content } = req.body;
-    const page = await Page.findOne({ "files._id": fileId });
-    if (!page) return res.status(404).json({ message: "Document not found" });
-    const doc = page.files.id(fileId);
-    if (!doc) return res.status(404).json({ message: "Document not found" });
-    doc.content = content;
-    doc.size = content.length;
-    await page.save();
-    res.json(doc);
-  } catch (error) {
-    console.error("Update document error:", error);
-    res.status(500).json({ message: "Failed to update document" });
-  }
-});
-
 module.exports = router;

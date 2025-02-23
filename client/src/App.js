@@ -1,20 +1,27 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import HomePage from './pages/HomePage';
-import MailPage from './pages/MailPage';
-import InternalFilesPage from './pages/InternalFilesPage';
-import ProjectList from './pages/ProjectList';
-import ProjectDetailsWithFiles from './pages/ProjectDetailsWithFiles';
-import ProjectManager from './pages/ProjectManager';
-import QuotationPage from './pages/QuotationPage';
-import CustomFlowChartEditor from './pages/CustomFlowChartEditor';
-import TemplateLibrary from './pages/TemplateLibrary';
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import HomePage from "./pages/HomePage";
+import MailPage from "./pages/MailPage";
+import InternalFilesPage from "./pages/InternalFilesPage";
+import ProjectList from "./pages/ProjectList";
+import ProjectDetailsWithFiles from "./pages/ProjectDetailsWithFiles";
+import ProjectManager from "./pages/ProjectManager";
+import QuotationPage from "./pages/QuotationPage";
+import CustomFlowChartEditor from "./pages/CustomFlowChartEditor";
+import TemplateLibrary from "./pages/TemplateLibrary";
+import UserManagement from "./pages/UserManagement"; // 新增身份管理頁面
+import ProjectSettings from "./pages/ProjectSettings";
 
 // 簡易判斷是否已登入
 const isAuthenticated = () => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
   return !!token;
 };
 
@@ -26,7 +33,11 @@ function App() {
         <Route
           path="/"
           element={
-            isAuthenticated() ? <Navigate to="/home" /> : <Navigate to="/login" />
+            isAuthenticated() ? (
+              <Navigate to="/home" />
+            ) : (
+              <Navigate to="/login" />
+            )
           }
         />
         <Route
@@ -35,39 +46,84 @@ function App() {
         />
         <Route
           path="/register"
-          element={isAuthenticated() ? <Navigate to="/home" /> : <RegisterPage />}
+          element={
+            isAuthenticated() ? <Navigate to="/home" /> : <RegisterPage />
+          }
         />
-        
+
         {/* 已登入路由 */}
-        <Route 
-          path="/home" 
-          element={isAuthenticated() ? <HomePage /> : <Navigate to="/login" />} 
+        <Route
+          path="/home"
+          element={isAuthenticated() ? <HomePage /> : <Navigate to="/login" />}
         />
-        <Route 
-          path="/mail" 
-          element={isAuthenticated() ? <MailPage /> : <Navigate to="/login" />} 
+        <Route
+          path="/mail"
+          element={isAuthenticated() ? <MailPage /> : <Navigate to="/login" />}
         />
-        <Route 
+        <Route
           path="/internal-files"
-          element={isAuthenticated() ? <InternalFilesPage /> : <Navigate to="/login" />}
+          element={
+            isAuthenticated() ? <InternalFilesPage /> : <Navigate to="/login" />
+          }
         />
         <Route
           path="/projects"
-          element={isAuthenticated() ? <ProjectList /> : <Navigate to="/login" />}
+          element={
+            isAuthenticated() ? <ProjectList /> : <Navigate to="/login" />
+          }
         />
-                <Route path="/projects/:id" element={isAuthenticated() ? <ProjectDetailsWithFiles /> : <Navigate to="/login" />} />
+        <Route
+          path="/projects/:id"
+          element={
+            isAuthenticated() ? (
+              <ProjectDetailsWithFiles />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
 
         <Route
           path="/project-manager"
-          element={isAuthenticated() ? <ProjectManager /> : <Navigate to="/login" />}
+          element={
+            isAuthenticated() ? <ProjectManager /> : <Navigate to="/login" />
+          }
         />
         <Route
           path="/quotation"
-          element={isAuthenticated() ? <QuotationPage /> : <Navigate to="/login" />}
+          element={
+            isAuthenticated() ? <QuotationPage /> : <Navigate to="/login" />
+          }
         />
-        <Route path="/flowchart-editor/:id" element={isAuthenticated() ? <CustomFlowChartEditor /> : <Navigate to="/login" />} />
-        <Route path="/template-library" element={isAuthenticated() ? <TemplateLibrary /> : <Navigate to="/login" />} />
-        
+        <Route
+          path="/flowchart-editor/:id"
+          element={
+            isAuthenticated() ? (
+              <CustomFlowChartEditor />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/template-library"
+          element={
+            isAuthenticated() ? <TemplateLibrary /> : <Navigate to="/login" />
+          }
+        />
+        <Route
+          path="/user-management"
+          element={
+            isAuthenticated() ? <UserManagement /> : <Navigate to="/login" />
+          }
+        />
+        <Route
+          path="/project-settings/:id"
+          element={
+            isAuthenticated() ? <ProjectSettings /> : <Navigate to="/login" />
+          }
+        />
+
         {/* 404 處理，或直接導向 /home */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

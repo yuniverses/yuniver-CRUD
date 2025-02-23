@@ -1,6 +1,6 @@
-import axios from 'axios';
+import axios from "axios";
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001/api";
 
 // 取得所有專案
 export const fetchAllProjects = async (token) => {
@@ -62,6 +62,15 @@ export const addMessage = async (projectId, message, token) => {
     {
       headers: { Authorization: `Bearer ${token}` },
     }
+  );
+  return res.data;
+};
+
+export const updateProjectSettings = async (projectId, settings, token) => {
+  const res = await axios.put(
+    `${API_URL}/projects/${projectId}/settings`,
+    settings,
+    { headers: { Authorization: `Bearer ${token}` } }
   );
   return res.data;
 };

@@ -1,10 +1,17 @@
-// server/routes/userRoutes.js
-const express = require('express');
+// routes/userRoutes.js
+const express = require("express");
 const router = express.Router();
-const auth = require('../middlewares/authMiddleware'); // 如果需要驗證，請加上
-const { getAllUsers } = require('../controllers/userController');
+const auth = require("../middlewares/authMiddleware");
+const {
+  getUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+} = require("../controllers/userController");
 
-// 取得所有使用者（只回傳 _id 與 username）
-router.get('/', auth, getAllUsers);
+router.get("/", auth, getUsers);
+router.post("/", auth, createUser);
+router.put("/:id", auth, updateUser);
+router.delete("/:id", auth, deleteUser);
 
 module.exports = router;
