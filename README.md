@@ -28,8 +28,6 @@ git clone https://github.com/yuniverses/yuniver-CRUD.git
 cd yuniver-CRUD
 ```
 
-````
-
 ### 3️⃣ **設定環境變數**
 
 在 **server** 目錄下建立 `.env` 檔案：
