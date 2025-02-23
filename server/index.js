@@ -10,6 +10,7 @@ const fileRoutes = require('./routes/fileRoutes');
 const quoteRoutes = require('./routes/quoteRoutes');
 const userRoutes = require('./routes/userRoutes');  // 新增這行
 const templateRoutes = require('./routes/templateRoutes');
+const pageRoutes = require('./routes/pageRoutes');
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use('/api/files', fileRoutes);
 app.use('/api/quotation', quoteRoutes);
 app.use('/api/users', userRoutes); // 新增這行
 app.use('/api/templates', templateRoutes);
+app.use('/api/pages', pageRoutes);
 
 
 const PORT = process.env.PORT || 5000;

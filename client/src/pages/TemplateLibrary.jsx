@@ -5,8 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 const TemplateLibrary = () => {
   const [templates, setTemplates] = useState([]);
-  const [editingTemplateId, setEditingTemplateId] = useState(null);
-  const [editingData, setEditingData] = useState({ name: '', description: '', flowChart: [] });
+  const [selectedFile, setSelectedFile] = useState(null);
   const token = localStorage.getItem('token');
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
   const navigate = useNavigate();
@@ -26,6 +25,7 @@ const TemplateLibrary = () => {
     }
   };
 
+  // 下載模板：將模板 JSON 內容輸出為檔案，同時附上 name 欄位
   const handleDownloadTemplate = (template) => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(template, null, 2));
     const anchor = document.createElement('a');
@@ -36,29 +36,15 @@ const TemplateLibrary = () => {
     anchor.remove();
   };
 
+  // 套用模板：將模板的 flowChart 存入 localStorage，並導向新流程圖編輯器（new 模式）
   const handleApplyTemplate = (template) => {
-    // 儲存模板 flowChart 到 localStorage 並導向流程圖編輯器（例如 /flowchart-editor/new）
     localStorage.setItem('appliedTemplate', JSON.stringify(template.flowChart));
     navigate('/flowchart-editor/new');
   };
 
+  // 編輯模板：導向模板模式的流程圖編輯器，URL 格式： /flowchart-editor/template_{templateId}
   const handleEditTemplate = (template) => {
-    setEditingTemplateId(template._id);
-    setEditingData({ name: template.name, description: template.description, flowChart: template.flowChart });
-  };
-
-  const handleSaveTemplate = async () => {
-    try {
-      await axios.put(`${API_URL}/templates/${editingTemplateId}`, editingData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setEditingTemplateId(null);
-      fetchTemplates();
-      alert("Template updated successfully!");
-    } catch (error) {
-      console.error("Failed to update template", error);
-      alert("Update failed.");
-    }
+    navigate(`/flowchart-editor/template_${template._id}`);
   };
 
   const handleDeleteTemplate = async (templateId) => {
@@ -74,15 +60,18 @@ const TemplateLibrary = () => {
     }
   };
 
-  // 處理上傳模板 JSON 檔案
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    setSelectedFile(e.target.files[0]);
+  };
+
+  // 上傳模板：讀取 JSON 檔後呼叫 POST /api/templates 建立新模板
+  const handleImportTemplate = () => {
+    if (!selectedFile) return;
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target.result);
-        // 呼叫 createTemplate API，預設從上傳的 JSON 檔案中取得 name, description, flowChart
+        // 預期 JSON 至少包含 name, description, flowChart 欄位
         axios.post(`${API_URL}/templates`, json, {
           headers: { Authorization: `Bearer ${token}` }
         }).then(() => {
@@ -96,71 +85,36 @@ const TemplateLibrary = () => {
         alert("Invalid JSON file");
       }
     };
-    reader.readAsText(file);
+    reader.readAsText(selectedFile);
   };
 
   return (
     <div>
       <h2>Template Library</h2>
-      <div>
+      <div style={{ marginBottom: "10px" }}>
         <label>
           Import Template:
           <input type="file" accept=".json" onChange={handleFileChange} style={{ marginLeft: "5px" }} />
         </label>
+        <button onClick={handleImportTemplate} style={{ marginLeft: "10px" }}>Import Template</button>
       </div>
-      {editingTemplateId ? (
-        <div style={{ border: "1px solid #ccc", padding: "10px", marginTop: "20px" }}>
-          <h3>Edit Template</h3>
-          <div>
-            <label>Name:</label>
-            <input
-              type="text"
-              value={editingData.name}
-              onChange={(e) => setEditingData({ ...editingData, name: e.target.value })}
-            />
-          </div>
-          <div>
-            <label>Description:</label>
-            <textarea
-              value={editingData.description}
-              onChange={(e) => setEditingData({ ...editingData, description: e.target.value })}
-            />
-          </div>
-          <div>
-            <label>FlowChart JSON:</label>
-            <textarea
-              value={JSON.stringify(editingData.flowChart, null, 2)}
-              onChange={(e) => {
-                try {
-                  const parsed = JSON.parse(e.target.value);
-                  setEditingData({ ...editingData, flowChart: parsed });
-                } catch (error) {
-                  // 若解析失敗，不更新
-                }
-              }}
-              rows="10"
-              style={{ width: "100%" }}
-            />
-          </div>
-          <button onClick={handleSaveTemplate}>Save Template</button>
-          <button onClick={() => setEditingTemplateId(null)} style={{ marginLeft: "10px" }}>Cancel</button>
-        </div>
+      {templates.length === 0 ? (
+        <p>No templates available.</p>
       ) : (
-        <div>
-          {templates.map(template => (
-            <div key={template._id} style={{ border: "1px solid #ccc", padding: "10px", margin: "10px 0" }}>
-              <h3>{template.name}</h3>
-              <p>{template.description}</p>
-              <pre style={{ backgroundColor: "#f8f8f8", padding: "5px", maxHeight: "150px", overflow: "auto" }}>
-                {JSON.stringify(template.flowChart, null, 2)}
-              </pre>
-              <button onClick={() => handleDownloadTemplate(template)}>Download</button>
-              <button onClick={() => handleApplyTemplate(template)} style={{ marginLeft: "10px" }}>Apply</button>
-              <button onClick={() => handleEditTemplate(template)} style={{ marginLeft: "10px" }}>Edit</button>
-              <button onClick={() => handleDeleteTemplate(template._id)} style={{ marginLeft: "10px" }}>Delete</button>
-            </div>
-          ))}
-        </div>
+        templates.map(template => (
+          <div key={template._id} style={{ border: "1px solid #ccc", padding: "10px", margin: "10px 0" }}>
+            <h3>{template.name}</h3>
+            <p>{template.description}</p>
+            {/* 這裡簡單以 pre 呈現 JSON 預覽，可根據需要改為視覺化預覽 */}
+            <pre style={{ backgroundColor: "#f8f8f8", padding: "5px", maxHeight: "150px", overflow: "auto" }}>
+              {JSON.stringify(template.flowChart, null, 2)}
+            </pre>
+            <button onClick={() => handleDownloadTemplate(template)}>Download</button>
+            {/* <button onClick={() => handleApplyTemplate(template)} style={{ marginLeft: "10px" }}>Apply</button> */}
+            <button onClick={() => handleEditTemplate(template)} style={{ marginLeft: "10px" }}>Edit</button>
+            <button onClick={() => handleDeleteTemplate(template._id)} style={{ marginLeft: "10px" }}>Delete</button>
+          </div>
+        ))
       )}
     </div>
   );

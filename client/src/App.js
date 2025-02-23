@@ -6,7 +6,7 @@ import HomePage from './pages/HomePage';
 import MailPage from './pages/MailPage';
 import InternalFilesPage from './pages/InternalFilesPage';
 import ProjectList from './pages/ProjectList';
-import ProjectDetails from './pages/ProjectDetails';
+import ProjectDetailsWithFiles from './pages/ProjectDetailsWithFiles';
 import ProjectManager from './pages/ProjectManager';
 import QuotationPage from './pages/QuotationPage';
 import CustomFlowChartEditor from './pages/CustomFlowChartEditor';
@@ -55,10 +55,8 @@ function App() {
           path="/projects"
           element={isAuthenticated() ? <ProjectList /> : <Navigate to="/login" />}
         />
-        <Route
-          path="/projects/:id"
-          element={isAuthenticated() ? <ProjectDetails /> : <Navigate to="/login" />}
-        />
+                <Route path="/projects/:id" element={isAuthenticated() ? <ProjectDetailsWithFiles /> : <Navigate to="/login" />} />
+
         <Route
           path="/project-manager"
           element={isAuthenticated() ? <ProjectManager /> : <Navigate to="/login" />}

@@ -114,12 +114,18 @@ const isDescendant = (draggedId, node, allNodes) => {
 };
 
 const CustomFlowChartEditor = () => {
-  const { id: projectId } = useParams();
+  // 只解構一次 useParams
+  const { id } = useParams();
+  // 若 id 前綴為 "template_" 則視為模板模式
+  const isTemplateMode = id.startsWith("template_");
+  const realId = isTemplateMode ? id.split("_")[1] : id;
+
   const token = localStorage.getItem('token');
+  // 根據模式選擇 API 路徑
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
   const containerRef = useRef(null);
 
-  // 節點資料，包含 id, type, label, description, link, extras, children, containerId, position, size, status, customStatus, shape
+  // 節點資料，每個節點包含：id, type, label, description, link, extras, children, containerId, position, size, status, customStatus, shape
   const [nodes, setNodes] = useState([]);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [draggingNodeId, setDraggingNodeId] = useState(null);
@@ -127,14 +133,18 @@ const CustomFlowChartEditor = () => {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
-  // 讀取後端流程圖資料
+  // 讀取流程圖資料，依模式選擇 API
   useEffect(() => {
-    const fetchFlowChart = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axios.get(`${API_URL}/projects/${projectId}/flowchart`, {
+        const url = isTemplateMode
+          ? `${API_URL}/templates/${realId}`
+          : `${API_URL}/projects/${realId}/flowchart`;
+        const res = await axios.get(url, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const data = (res.data || []).map(item => ({
+        const data = isTemplateMode ? (res.data.flowChart || []) : (res.data || []);
+        const mapped = data.map(item => ({
           ...item,
           position: item.position || { x: 50, y: 50 },
           size: item.size || { width: NODE_WIDTH_DEFAULT, height: NODE_HEIGHT_DEFAULT },
@@ -143,13 +153,13 @@ const CustomFlowChartEditor = () => {
           status: (item.type === "phase" || item.type === "task") ? (item.status || "未開始") : item.status,
           shape: (item.type === "phase" || item.type === "task") ? (item.shape || "rectangle") : item.shape
         }));
-        setNodes(data);
+        setNodes(mapped);
       } catch (error) {
         console.error("Failed to load flowchart:", error);
       }
     };
-    fetchFlowChart();
-  }, [projectId, API_URL, token]);
+    fetchData();
+  }, [realId, isTemplateMode, API_URL, token]);
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId);
 
@@ -184,7 +194,7 @@ const CustomFlowChartEditor = () => {
     setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
-  // 拖曳移動：更新拖曳節點及所有後代（遞迴更新）
+  // 拖曳移動：更新拖曳節點及其所有後代（遞迴更新）
   const handleMouseMove = (e) => {
     if (draggingNodeId) {
       setNodes(prevNodes => {
@@ -309,7 +319,7 @@ const CustomFlowChartEditor = () => {
     setSelectedNodeId(null);
   };
 
-  // 新增節點：根據 type 新增，並預設對於 phase 與 task 加入 shape（預設為 rectangle）
+  // 新增節點：根據 type 新增，對於 phase 與 task 預設 shape 為 rectangle
   const handleAddNewNode = (type = "task") => {
     const newNode = {
       id: `${Date.now()}`,
@@ -328,10 +338,13 @@ const CustomFlowChartEditor = () => {
     setNodes(prev => [...prev, newNode]);
   };
 
-  // 儲存流程圖至後端
+  // 儲存流程圖，根據模式選擇 API 路徑
   const handleSave = async () => {
     try {
-      await axios.put(`${API_URL}/projects/${projectId}/flowchart`,
+      const url = isTemplateMode
+        ? `${API_URL}/templates/${realId}`
+        : `${API_URL}/projects/${realId}/flowchart`;
+      await axios.put(url,
         { flowChart: nodes },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -342,10 +355,9 @@ const CustomFlowChartEditor = () => {
     }
   };
 
-  // 下載流程圖 JSON 檔案
-const handleDownloadFlowchart = () => {
-    // 使用 prompt 讓使用者輸入模板名稱，預設為 "Flowchart Template {projectId}"
-    const templateName = prompt("請輸入模板名稱：", `Flowchart Template ${projectId}`);
+  // 下載流程圖 JSON，附加 name 欄位
+  const handleDownloadFlowchart = () => {
+    const templateName = prompt("請輸入模板名稱：", `Flowchart Template ${realId}`);
     const exportData = {
       name: templateName,
       flowChart: nodes
@@ -358,7 +370,6 @@ const handleDownloadFlowchart = () => {
     a.click();
     a.remove();
   };
-  
 
   // 上傳流程圖 JSON 檔案並套用
   const handleUploadFlowchart = (e) => {
@@ -368,7 +379,11 @@ const handleDownloadFlowchart = () => {
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target.result);
-        setNodes(json);
+        if (json.flowChart) {
+          setNodes(json.flowChart);
+        } else {
+          setNodes(json);
+        }
       } catch (error) {
         alert("Invalid JSON file");
       }
@@ -378,7 +393,7 @@ const handleDownloadFlowchart = () => {
 
   return (
     <div>
-      <h2>Custom Flow Chart Editor</h2>
+      <h2>Custom Flow Chart Editor {isTemplateMode ? "(Template Mode)" : ""}</h2>
       <div style={{ marginBottom: "10px" }}>
         <button onClick={() => handleAddNewNode("task")}>Add Task</button>
         <button onClick={() => handleAddNewNode("phase")} style={{ marginLeft: "10px" }}>Add Phase</button>
