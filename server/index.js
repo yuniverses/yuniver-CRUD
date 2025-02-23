@@ -30,5 +30,6 @@ app.use("/api/templates", templateRoutes);
 app.use("/api/pages", pageRoutes);
 app.use("/api/projects", projectRoutes);
 
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

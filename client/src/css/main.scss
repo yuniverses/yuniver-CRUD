@@ -1,0 +1,336 @@
+// 主體容器設置
+.project-details-container {
+  display: flex;
+  height: 100vh;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background-color: #f7f7f7;
+
+  // 左側側邊欄
+  .sidebar {
+    width: 250px;
+    border-right: 1px solid #e0e0e0;
+    padding: 20px;
+    background-color: #ffffff;
+    box-shadow: 4px 0 6px rgba(0, 0, 0, 0.1);
+
+    h2 {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 14px;
+      color: #777;
+      margin-bottom: 10px;
+    }
+
+    // 頁面列表
+    ul {
+      list-style: none;
+      padding: 0;
+
+      li {
+        font-size: 14px;
+        color: #555;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+
+        &:hover {
+          background-color: #e0e0e0;
+        }
+
+        // 按鈕區域（hover顯示）
+        .file-actions {
+          display: none;
+          position: absolute;
+          right: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+
+          button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            margin-right: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+
+            &:hover {
+              background-color: #0056b3;
+            }
+          }
+        }
+
+        // 當li hover時顯示按鈕
+        &:hover .file-actions {
+          display: block;
+        }
+      }
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background-color: #0056b3;
+      }
+    }
+  }
+
+  // 中間區域: 檔案列表
+  // 文件列表項目的按鈕隱藏及顯示樣式
+  .files-section {
+    width: 300px;
+    border-right: 1px solid #e0e0e0;
+    padding: 20px;
+    background-color: #ffffff;
+    box-shadow: 4px 0 6px rgba(0, 0, 0, 0.1);
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin-bottom: 20px;
+
+      li {
+        font-size: 14px;
+        color: #555;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        position: relative;
+        transition: background-color 0.3s ease;
+
+        &:hover {
+          background-color: #f4f4f4;
+        }
+
+        .file-actions {
+          display: none; // 初始隱藏按鈕
+          position: absolute;
+          right: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+          font-size: 12px;
+
+          button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+
+            &:hover {
+              background-color: #0056b3;
+            }
+          }
+        }
+
+        // 當li hover時顯示按鈕
+        &:hover .file-actions {
+          display: block;
+        }
+      }
+    }
+
+    .action-button {
+      background-color: #28a745;
+      color: white;
+      padding: 10px;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      width: 100%;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background-color: #218838;
+      }
+    }
+  }
+
+  // 預覽區域
+  .preview-section {
+    flex-grow: 1;
+    padding: 20px;
+    background-color: #ffffff;
+
+    h2 {
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .preview-content {
+      width: 100%;
+      height: 80%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+
+      img,
+      video,
+      audio {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+
+      .ql-container {
+        width: 100%;
+        height: 100%;
+      }
+
+      button {
+        margin-top: 10px;
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+
+        &:hover {
+          background-color: #0056b3;
+        }
+
+        &.secondary {
+          background-color: #28a745;
+          &:hover {
+            background-color: #218838;
+          }
+        }
+      }
+    }
+  }
+
+  // 浮動的備註與訊息區
+  .floating-panel {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 300px;
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+
+    .toggle-button {
+      background-color: #f1f1f1;
+      color: #333;
+      font-size: 14px;
+      border: none;
+      padding: 8px;
+      width: 100%;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      text-align: left;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background-color: #e8e8e8;
+      }
+    }
+
+    .panel-content {
+      display: flex;
+      flex-direction: column;
+
+      input {
+        padding: 8px;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      button {
+        background-color: #007bff;
+        color: white;
+        padding: 10px;
+        font-size: 14px;
+        border: none;
+        cursor: pointer;
+        border-radius: 5px;
+        margin-top: 5px;
+
+        &:hover {
+          background-color: #0056b3;
+        }
+      }
+
+      ul {
+        padding-left: 20px;
+        list-style: none;
+
+        li {
+          font-size: 14px;
+          color: #555;
+          margin-bottom: 5px;
+
+          small {
+            font-size: 12px;
+            color: #aaa;
+          }
+        }
+      }
+    }
+  }
+}
+
+// 全局設置
+body {
+  background-color: #f7f7f7;
+  margin: 0;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+button {
+  cursor: pointer;
+}
+
+input[type="text"],
+input[type="file"] {
+  border: 1px solid #ccc;
+  padding: 8px;
+  margin-top: 5px;
+  border-radius: 4px;
+}
+
+h2,
+h3 {
+  font-size: 16px;
+  color: #333;
+}
+
+p {
+  font-size: 14px;
+  color: #666;
+}

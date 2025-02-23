@@ -1,8 +1,8 @@
-// src/pages/ProjectDetailsWithFiles.jsx
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
+import "../css/main.css";
 import ReactDOM from "react-dom";
 
 import { getProjectDetails, addNote, addMessage } from "../api/project";
@@ -18,6 +18,7 @@ import {
 if (!ReactDOM.findDOMNode) {
   ReactDOM.findDOMNode = (element) => element;
 }
+
 // 定義 ReactQuill 的工具列與格式設定
 const quillModules = {
   toolbar: [
@@ -65,7 +66,22 @@ function ProjectDetailsWithFiles() {
     loadProject();
     loadPages();
   }, [id]);
+  // 更新每個文件的hover狀態
+  const handleMouseEnter = (fileId) => {
+    setFiles((prevFiles) =>
+      prevFiles.map((file) =>
+        file._id === fileId ? { ...file, isHovered: true } : file
+      )
+    );
+  };
 
+  const handleMouseLeave = (fileId) => {
+    setFiles((prevFiles) =>
+      prevFiles.map((file) =>
+        file._id === fileId ? { ...file, isHovered: false } : file
+      )
+    );
+  };
   const loadProject = async () => {
     try {
       const data = await getProjectDetails(id, token);
@@ -91,7 +107,12 @@ function ProjectDetailsWithFiles() {
   const loadFiles = async (pageId) => {
     try {
       const data = await getPageFiles(pageId, token);
-      setFiles(data);
+      // 為每個文件添加 isHovered 屬性
+      const filesWithHoverState = data.map((file) => ({
+        ...file,
+        isHovered: false, // 初始化為 false
+      }));
+      setFiles(filesWithHoverState);
     } catch (err) {
       console.error(err);
     }
@@ -326,12 +347,22 @@ function ProjectDetailsWithFiles() {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
+                    position: "relative",
                   }}
+                  onMouseEnter={() => handleMouseEnter(file._id)} // 當鼠標進入
+                  onMouseLeave={() => handleMouseLeave(file._id)} // 當鼠標離開
                 >
                   <span onClick={() => setSelectedFile(file)}>
                     {file.filename}
                   </span>
-                  <span>
+                  <div
+                    className="file-actions"
+                    style={{
+                      display: file.isHovered ? "block" : "none", // 根據hover狀態顯示按鈕
+                      position: "absolute",
+                      right: "10px",
+                    }}
+                  >
                     <button
                       onClick={() => handleRenameFile(file._id)}
                       style={{ marginRight: "5px" }}
@@ -341,7 +372,7 @@ function ProjectDetailsWithFiles() {
                     <button onClick={() => handleDeleteFile(file._id)}>
                       Delete
                     </button>
-                  </span>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -401,6 +432,34 @@ function ProjectDetailsWithFiles() {
                   objectFit: "contain",
                 }}
               />
+              <button onClick={() => handleFileDownload(selectedFile.filename)}>
+                下載檔案
+              </button>
+            </div>
+          ) : selectedFile.mimetype &&
+            selectedFile.mimetype.startsWith("audio/") ? (
+            <div>
+              <audio controls style={{ width: "100%" }}>
+                <source
+                  src={`http://localhost:5001/uploads/${selectedFile.filename}`}
+                  type={selectedFile.mimetype}
+                />
+                Your browser does not support the audio element.
+              </audio>
+              <button onClick={() => handleFileDownload(selectedFile.filename)}>
+                下載檔案
+              </button>
+            </div>
+          ) : selectedFile.mimetype &&
+            selectedFile.mimetype.startsWith("video/") ? (
+            <div>
+              <video controls style={{ width: "100%" }}>
+                <source
+                  src={`http://localhost:5001/uploads/${selectedFile.filename}`}
+                  type={selectedFile.mimetype}
+                />
+                Your browser does not support the video element.
+              </video>
               <button onClick={() => handleFileDownload(selectedFile.filename)}>
                 下載檔案
               </button>

@@ -29,7 +29,7 @@ function HomePage() {
             <Link to="/quotation">報價單</Link>
           </li>
           <li>
-            <Link to="/user-management">身份管理</Link>
+            <Link to="/usermanagement">身份管理</Link>
           </li>
           <li>
             <button onClick={handleLogout}>登出</button>

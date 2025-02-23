@@ -159,7 +159,7 @@ function App() {
           }
         />
         <Route
-          path="/user-management"
+          path="/UserManagement"
           element={
             hasAccess(role, ["god", "admin"]) ? (
               <UserManagement />
