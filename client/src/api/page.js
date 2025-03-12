@@ -23,3 +23,22 @@ export const getPageFiles = async (pageId, token) => {
   });
   return res.data;
 };
+// 刪除頁面
+export const deletePage = async (pageId, token) => {
+  const res = await axios.delete(`${API_URL}/pages/${pageId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
+// 重新命名頁面
+export const renamePage = async (pageId, newName, token) => {
+  const res = await axios.put(
+    `${API_URL}/pages/${pageId}`,
+    { newName },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  return res.data;
+};

@@ -134,6 +134,7 @@ exports.updateFlowChart = async (req, res) => {
   }
 };
 
+// controllers/projectController.js
 exports.updateProjectSettings = async (req, res) => {
   try {
     if (!req.user) {
@@ -156,3 +157,4 @@ exports.updateProjectSettings = async (req, res) => {
     res.status(500).json({ message: "Failed to update project settings" });
   }
 };
+

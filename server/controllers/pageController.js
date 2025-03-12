@@ -65,3 +65,40 @@ exports.uploadFileToPage = [
     }
   }
 ];
+
+// 刪除頁面
+exports.deletePage = async (req, res) => {
+  try {
+    const { pageId } = req.params;
+    const page = await Page.findById(pageId);
+    if (!page) {
+      return res.status(404).json({ message: 'Page not found' });
+    }
+    await page.remove();
+    res.json({ message: 'Page deleted successfully' });
+  } catch (error) {
+    console.error("Delete page error:", error);
+    res.status(500).json({ message: 'Failed to delete page' });
+  }
+};
+
+// 重新命名頁面
+exports.renamePage = async (req, res) => {
+  try {
+    const { pageId } = req.params;
+    const { newName } = req.body;
+    if (!newName) {
+      return res.status(400).json({ message: 'Missing new name' });
+    }
+    const page = await Page.findById(pageId);
+    if (!page) {
+      return res.status(404).json({ message: 'Page not found' });
+    }
+    page.name = newName;
+    await page.save();
+    res.json({ message: 'Page renamed successfully', page });
+  } catch (error) {
+    console.error("Rename page error:", error);
+    res.status(500).json({ message: 'Failed to rename page' });
+  }
+};

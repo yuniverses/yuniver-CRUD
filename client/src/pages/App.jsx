@@ -1,3 +1,4 @@
+//client/src/pages/App.jsx
 import React, { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
@@ -5,7 +6,7 @@ import {
   Switch,
   Redirect,
 } from "react-router-dom";
-import { getUserRole } from "./api/user"; // 假設有此 API
+import { getUserRole } from "./api/user"; 
 import ProjectManager from "./pages/ProjectManager";
 import IdentityManagement from "./pages/IdentityManagement";
 import ProjectList from "./pages/ProjectList";
@@ -15,11 +16,11 @@ import InternalFiles from "./pages/InternalFiles";
 function App() {
   const [role, setRole] = useState(null);
 
-  // 假設你會從後端獲取用戶角色資訊
+  // 後端獲取用戶角色資訊
   useEffect(() => {
     const fetchRole = async () => {
       try {
-        const user = await getUserRole(); // 請根據你的 API 路徑設置
+        const user = await getUserRole(); 
         setRole(user.role);
       } catch (err) {
         console.error(err);

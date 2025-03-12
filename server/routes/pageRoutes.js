@@ -6,11 +6,17 @@ const {
   createPage,
   getPageFiles,
   uploadFileToPage,
+  deletePage,
+  renamePage,
 } = require("../controllers/pageController");
 
 router.get("/:projectId", auth, getPages);
 router.post("/:projectId", auth, createPage);
 router.get("/files/:pageId", auth, getPageFiles);
 router.post("/files/:pageId", auth, uploadFileToPage);
+// 新增刪除頁面的路由
+router.delete("/:pageId", auth, deletePage);
+// 新增重新命名頁面的路由
+router.put("/:pageId", auth, renamePage);
 
 module.exports = router;

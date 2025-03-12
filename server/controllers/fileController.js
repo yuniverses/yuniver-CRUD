@@ -44,3 +44,29 @@ exports.downloadFile = async (req, res) => {
     res.status(500).json({ message: 'Failed to download file' });
   }
 };
+
+//  renameFile 
+exports.renameFile = async (req, res) => {
+  try {
+    const fileId = req.params.fileId;
+    const { newName } = req.body;
+    if (!newName) {
+      return res.status(400).json({ message: "請提供新檔案名稱" });
+    }
+
+    // 更新檔案名稱
+    const updatedFile = await File.findByIdAndUpdate(
+      fileId,
+      { fileName: newName },
+      { new: true }
+    );
+
+    if (!updatedFile) {
+      return res.status(404).json({ message: "檔案未找到" });
+    }
+    
+    res.json({ message: "檔案重新命名成功", file: updatedFile });
+  } catch (err) {
+    res.status(500).json({ message: "檔案重新命名失敗", error: err.message });
+  }
+};
