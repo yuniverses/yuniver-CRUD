@@ -1,3 +1,4 @@
+// client/src/pages/ProjectDetailsWithFiles.jsx
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ReactQuill from "react-quill";
@@ -6,7 +7,7 @@ import "../css/main.css";
 import ReactDOM from "react-dom";
 
 import { getProjectDetails, addNote, addMessage } from "../api/project";
-import { getPages, createPage, getPageFiles,renamePage,deletePage } from "../api/page";
+import { getPages, createPage, getPageFiles, renamePage, deletePage } from "../api/page";
 import {
   uploadFile,
   downloadFile,
@@ -62,34 +63,34 @@ function ProjectDetailsWithFiles() {
   // 用於線上文件編輯的內容
   const [docContent, setDocContent] = useState("");
 
-
-// 取得並解碼 JWT Token 中的角色資訊
-const getRole = () => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      return payload.role || null;
-    } catch (err) {
-      console.error("Token 解碼錯誤:", err);
-      return null;
+  // 取得並解碼 JWT Token 中的角色資訊
+  const getRole = () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        return payload.role || null;
+      } catch (err) {
+        console.error("Token 解碼錯誤:", err);
+        return null;
+      }
     }
-  }
-  return null;
-};
+    return null;
+  };
 
-// 簡單權限檢查函式，檢查當前角色是否在允許列表中
-const hasAccess = (role, allowedRoles) => {
-  return allowedRoles.includes(role);
-};
+  // 簡單權限檢查函式，檢查當前角色是否在允許列表中
+  const hasAccess = (role, allowedRoles) => {
+    return allowedRoles.includes(role);
+  };
 
-const role = getRole();
+  const role = getRole();
 
   useEffect(() => {
     loadProject();
     loadPages();
   }, [id]);
-  // 更新每個文件的hover狀態
+
+  // 更新每個文件的 hover 狀態
   const handleMouseEnter = (fileId) => {
     setFiles((prevFiles) =>
       prevFiles.map((file) =>
@@ -105,6 +106,7 @@ const role = getRole();
       )
     );
   };
+
   const loadProject = async () => {
     try {
       const data = await getProjectDetails(id, token);
@@ -313,76 +315,95 @@ const role = getRole();
               ? new Date(project.period.endDate).toLocaleDateString()
               : ""}
           </p>
+          {/* 加入進行中項目 */}
+          <div>
+  <h3>進行中的項目</h3>
+  {project.flowChart &&
+  project.flowChart.filter(
+    (node) => node.type === "task" && node.status === "進行中"
+  ).length > 0 ? (
+    <ul>
+      {project.flowChart
+        .filter((node) => node.type === "task" && node.status === "進行中")
+        .map((task) => (
+          <li key={task.id}>
+            <button onClick={() => navigate(`/flowchart-editor/${id}`)}>
+            {task.label || "Unnamed Task"}
+          </button>
+          </li>
+        ))}
+    </ul>
+  ) : (
+    <p>無進行中的項目</p>
+  )}
+</div>
+          {/* 額外可加入其他專案資訊 */}
         </div>
         <div>
           <h3>頁面列表</h3>
           <ul style={{ listStyle: "none", padding: 0 }}>
-  {pages.map((page) => (
-    <li key={page._id || page.id} style={{ marginBottom: "5px" }}>
-      <span onClick={() => setSelectedPage(page)}>
-        {page.name}
-      </span>
-      {hasAccess(role, ["god", "admin", "employee"]) && (
-      <button
-        onClick={async () => {
-          const newName = prompt("請輸入新的頁面名稱：", page.name);
-          if (newName && newName !== page.name) {
-            try {
-              const updated = await renamePage(page._id || page.id, newName, token);
-              // 更新頁面列表，可重載或在 state 中直接更新
-              // 例如：setPages(pages.map(p => p._id === updated.page._id ? updated.page : p));
-              loadPages();
-            } catch (err) {
-              console.error(err);
-              alert("頁面重新命名失敗");
-            }
-          }
-        }}
-        style={{ marginLeft: "10px" }}
-      >
-        Rename
-      </button>
-      )}
-      {hasAccess(role, ["god", "admin", "employee"]) && (
-      <button
-        onClick={async () => {
-          if (window.confirm("確定刪除此頁面嗎？")) {
-            try {
-              await deletePage(page._id || page.id, token);
-              // 更新頁面列表
-              setPages(pages.filter(p => (p._id || p.id) !== (page._id || page.id)));
-              loadPages();
-            } catch (err) {
-              console.error(err);
-              alert("刪除頁面失敗");
-            }
-          }
-        }}
-        style={{ marginLeft: "10px" }}
-      >
-        Delete
-      </button>
-      )}
-    </li>
-  ))}
-</ul>
-{hasAccess(role, ["god", "admin", "employee"]) && (
-          <button onClick={handleCreatePage}>新增頁面</button>
-        )}
+            {pages.map((page) => (
+              <li key={page._id || page.id} style={{ marginBottom: "5px" }}>
+                <span onClick={() => setSelectedPage(page)}>
+                  {page.name}
+                </span>
+                {hasAccess(role, ["god", "admin", "employee"]) && (
+                  <button
+                    onClick={async () => {
+                      const newName = prompt("請輸入新的頁面名稱：", page.name);
+                      if (newName && newName !== page.name) {
+                        try {
+                          const updated = await renamePage(page._id || page.id, newName, token);
+                          loadPages();
+                        } catch (err) {
+                          console.error(err);
+                          alert("頁面重新命名失敗");
+                        }
+                      }
+                    }}
+                    style={{ marginLeft: "10px" }}
+                  >
+                    Rename
+                  </button>
+                )}
+                {hasAccess(role, ["god", "admin", "employee"]) && (
+                  <button
+                    onClick={async () => {
+                      if (window.confirm("確定刪除此頁面嗎？")) {
+                        try {
+                          await deletePage(page._id || page.id, token);
+                          setPages(pages.filter(p => (p._id || p.id) !== (page._id || page.id)));
+                          loadPages();
+                        } catch (err) {
+                          console.error(err);
+                          alert("刪除頁面失敗");
+                        }
+                      }
+                    }}
+                    style={{ marginLeft: "10px" }}
+                  >
+                    Delete
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          {hasAccess(role, ["god", "admin", "employee"]) && (
+            <button onClick={handleCreatePage}>新增頁面</button>
+          )}
         </div>
         <div>
           <button onClick={() => navigate(`/flowchart-editor/${id}`)}>
             案件流程圖
           </button>
           {hasAccess(role, ["god", "admin", "employee"]) && (
-
-          <button
-            onClick={() => navigate(`/project-settings/${id}`)}
-            style={{ marginTop: "10px" }}
-          >
-            案件資訊設定
-          </button>
-        )}
+            <button
+              onClick={() => navigate(`/project-settings/${id}`)}
+              style={{ marginTop: "10px" }}
+            >
+              案件資訊設定
+            </button>
+          )}
         </div>
       </div>
 
@@ -413,8 +434,8 @@ const role = getRole();
                   onMouseLeave={() => handleMouseLeave(file._id)} // 當鼠標離開
                 >
                   <span onClick={() => setSelectedFile(file)}>
-  {file.originalname || file.filename}
-</span>
+                    {file.originalname || file.filename}
+                  </span>
                   <div
                     className="file-actions"
                     style={{
@@ -424,41 +445,40 @@ const role = getRole();
                     }}
                   >
                     {hasAccess(role, ["god", "admin", "employee"]) && (
-                    <button
-                      onClick={() => handleRenameFile(file._id || file.id)}
-                      style={{ marginRight: "5px" }}
-                    >
-                      Rename
-                    </button>
+                      <button
+                        onClick={() => handleRenameFile(file._id || file.id)}
+                        style={{ marginRight: "5px" }}
+                      >
+                        Rename
+                      </button>
                     )}
                     {hasAccess(role, ["god", "admin", "employee"]) && (
-                    <button onClick={() => handleDeleteFile(file._id)}>
-                      Delete
-                    </button>
-                  )}
+                      <button onClick={() => handleDeleteFile(file._id)}>
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </li>
               ))}
             </ul>
             {hasAccess(role, ["god", "admin", "employee"]) && (
               <label>
-              上傳檔案:
-              <input
-                type="file"
-                onChange={handleFileUpload}
-                style={{ display: "block", marginTop: "5px" }}
-              />
-            </label>
-          )}
+                上傳檔案:
+                <input
+                  type="file"
+                  onChange={handleFileUpload}
+                  style={{ display: "block", marginTop: "5px" }}
+                />
+              </label>
+            )}
             {hasAccess(role, ["god", "admin", "employee"]) && (
-
-            <button
-              onClick={handleCreateDocument}
-              style={{ marginTop: "10px" }}
-            >
-              新增文檔
-            </button>
-                      )}
+              <button
+                onClick={handleCreateDocument}
+                style={{ marginTop: "10px" }}
+              >
+                新增文檔
+              </button>
+            )}
           </div>
         ) : (
           <p>請選擇一個頁面</p>
@@ -469,86 +489,86 @@ const role = getRole();
       <div style={{ flex: 1, padding: "10px" }}>
         <h2>檔案預覽</h2>
         {selectedFile ? (
-  selectedFile.mimetype === "text/plain" ||
-  selectedFile.mimetype === "text/html" ? (
-    <div>
-      <ReactQuill
-        value={docContent}
-        onChange={setDocContent}
-        modules={quillModules}
-        formats={quillFormats}
-        style={{ width: "100%", height: "80%" }}
-      />
-      <button onClick={() => handleFileDownload(selectedFile.filename)}>
-        下載檔案
-      </button>
-      <button onClick={handleUpdateDocument} style={{ marginLeft: "10px" }}>
-        儲存變更
-      </button>
-    </div>
-  ) : selectedFile.mimetype === "application/pdf" ? (
-    <div>
-      <iframe
-        src={`http://localhost:5001/uploads/${selectedFile.filename}`}
-        title="PDF Preview"
-        width="100%"
-        height="80%"
-        style={{ border: "none" }}
-      />
-      <button onClick={() => handleFileDownload(selectedFile.filename)}>
-        下載檔案
-      </button>
-    </div>
-  ) : selectedFile.mimetype &&
-    selectedFile.mimetype.startsWith("image/") ? (
-    <div>
-      <img
-        src={`http://localhost:5001/uploads/${selectedFile.filename}`}
-        alt="File Preview"
-        style={{
-          width: "100%",
-          height: "80%",
-          objectFit: "contain",
-        }}
-      />
-      <button onClick={() => handleFileDownload(selectedFile.filename)}>
-        下載檔案
-      </button>
-    </div>
-  ) : selectedFile.mimetype &&
-    selectedFile.mimetype.startsWith("audio/") ? (
-    <div>
-      <audio controls style={{ width: "100%" }}>
-        <source
-          src={`http://localhost:5001/uploads/${selectedFile.filename}`}
-          type={selectedFile.mimetype}
-        />
-        Your browser does not support the audio element.
-      </audio>
-      <button onClick={() => handleFileDownload(selectedFile.filename)}>
-        下載檔案
-      </button>
-    </div>
-  ) : selectedFile.mimetype &&
-    selectedFile.mimetype.startsWith("video/") ? (
-    <div>
-      <video controls style={{ width: "100%" }}>
-        <source
-          src={`http://localhost:5001/uploads/${selectedFile.filename}`}
-          type={selectedFile.mimetype}
-        />
-        Your browser does not support the video element.
-      </video>
-      <button onClick={() => handleFileDownload(selectedFile.filename)}>
-        下載檔案
-      </button>
-    </div>
-  ) : (
-    <p>無法預覽此檔案</p>
-  )
-) : (
-  <p>請從檔案列表中選擇檔案以預覽</p>
-)}
+          selectedFile.mimetype === "text/plain" ||
+          selectedFile.mimetype === "text/html" ? (
+            <div>
+              <ReactQuill
+                value={docContent}
+                onChange={setDocContent}
+                modules={quillModules}
+                formats={quillFormats}
+                style={{ width: "100%", height: "80%" }}
+              />
+              <button onClick={() => handleFileDownload(selectedFile.filename)}>
+                下載檔案
+              </button>
+              <button onClick={handleUpdateDocument} style={{ marginLeft: "10px" }}>
+                儲存變更
+              </button>
+            </div>
+          ) : selectedFile.mimetype === "application/pdf" ? (
+            <div>
+              <iframe
+                src={`http://localhost:5001/uploads/${selectedFile.filename}`}
+                title="PDF Preview"
+                width="100%"
+                height="80%"
+                style={{ border: "none" }}
+              />
+              <button onClick={() => handleFileDownload(selectedFile.filename)}>
+                下載檔案
+              </button>
+            </div>
+          ) : selectedFile.mimetype &&
+            selectedFile.mimetype.startsWith("image/") ? (
+            <div>
+              <img
+                src={`http://localhost:5001/uploads/${selectedFile.filename}`}
+                alt="File Preview"
+                style={{
+                  width: "100%",
+                  height: "80%",
+                  objectFit: "contain",
+                }}
+              />
+              <button onClick={() => handleFileDownload(selectedFile.filename)}>
+                下載檔案
+              </button>
+            </div>
+          ) : selectedFile.mimetype &&
+            selectedFile.mimetype.startsWith("audio/") ? (
+            <div>
+              <audio controls style={{ width: "100%" }}>
+                <source
+                  src={`http://localhost:5001/uploads/${selectedFile.filename}`}
+                  type={selectedFile.mimetype}
+                />
+                Your browser does not support the audio element.
+              </audio>
+              <button onClick={() => handleFileDownload(selectedFile.filename)}>
+                下載檔案
+              </button>
+            </div>
+          ) : selectedFile.mimetype &&
+            selectedFile.mimetype.startsWith("video/") ? (
+            <div>
+              <video controls style={{ width: "100%" }}>
+                <source
+                  src={`http://localhost:5001/uploads/${selectedFile.filename}`}
+                  type={selectedFile.mimetype}
+                />
+                Your browser does not support the video element.
+              </video>
+              <button onClick={() => handleFileDownload(selectedFile.filename)}>
+                下載檔案
+              </button>
+            </div>
+          ) : (
+            <p>無法預覽此檔案</p>
+          )
+        ) : (
+          <p>請從檔案列表中選擇檔案以預覽</p>
+        )}
       </div>
 
       {/* 備註與溝通視窗，使用懸浮呈現 */}

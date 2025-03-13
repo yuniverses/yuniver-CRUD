@@ -23,7 +23,6 @@ function ProjectList() {
     }
     return { id: null, role: null };
   };
-  
 
   const user = getUserFromToken();
 
@@ -54,12 +53,13 @@ function ProjectList() {
     <div style={{ padding: '20px' }}>
       <h2>專案列表</h2>
       {filteredProjects.length > 0 ? (
-        <table border="1" cellPadding="8">
+        <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
               <th>客戶名稱</th>
               <th>專案名稱</th>
               <th>負責人</th>
+              <th>進行中項目</th>
               <th>期間</th>
               <th>詳細</th>
             </tr>
@@ -70,6 +70,17 @@ function ProjectList() {
                 <td>{proj.clientName}</td>
                 <td>{proj.projectName}</td>
                 <td>{proj.owner?.username || 'N/A'}</td>
+                <td>
+                {proj.flowChart
+        .filter((node) => node.type === "task" && node.status === "進行中")
+        .map((task) => (
+          <li key={task.id}>
+            {task.label || "Unnamed Task"}
+          </li>
+        ))}
+</td>
+
+
                 <td>
                   {proj.period?.startDate
                     ? new Date(proj.period.startDate).toLocaleDateString()

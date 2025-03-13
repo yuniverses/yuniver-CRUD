@@ -28,7 +28,37 @@ const getStatusColor = (node) => {
   }
   return "#fff";
 };
-
+// 渲染箭頭函數
+const renderArrow = (node) => {
+  const { points } = node;
+  if (!points || points.length < 2) return null;
+  
+  // 將所有點連接為SVG路徑
+  let pathData = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length; i++) {
+    pathData += ` L ${points[i].x} ${points[i].y}`;
+  }
+  
+  // 計算箭頭方向 (最後兩個點決定)
+  const lastPoint = points[points.length - 1];
+  const prevPoint = points[points.length - 2];
+  const angle = Math.atan2(lastPoint.y - prevPoint.y, lastPoint.x - prevPoint.x);
+  
+  // 箭頭尖端
+  const arrowLength = 10;
+  const arrowAngle = Math.PI / 6; // 30度
+  const x1 = lastPoint.x - arrowLength * Math.cos(angle - arrowAngle);
+  const y1 = lastPoint.y - arrowLength * Math.sin(angle - arrowAngle);
+  const x2 = lastPoint.x - arrowLength * Math.cos(angle + arrowAngle);
+  const y2 = lastPoint.y - arrowLength * Math.sin(angle + arrowAngle);
+  
+  return (
+    <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
+      <path d={pathData} stroke="black" strokeWidth="2" fill="none" />
+      <path d={`M ${lastPoint.x} ${lastPoint.y} L ${x1} ${y1} L ${x2} ${y2} Z`} fill="black" />
+    </svg>
+  );
+};
 // 根據形狀設定額外 CSS
 const getShapeStyle = (shape) => {
   switch (shape) {
@@ -114,26 +144,42 @@ const isDescendant = (draggedId, node, allNodes) => {
 };
 
 const CustomFlowChartEditor = () => {
-  // 只解構一次 useParams
   const { id } = useParams();
-  // 若 id 前綴為 "template_" 則視為模板模式
   const isTemplateMode = id.startsWith("template_");
   const realId = isTemplateMode ? id.split("_")[1] : id;
-
   const token = localStorage.getItem('token');
-  // 根據模式選擇 API 路徑
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
   const containerRef = useRef(null);
 
-  // 節點資料，每個節點包含：id, type, label, description, link, extras, children, containerId, position, size, status, customStatus, shape
+  // 取得角色 (假設 token payload 包含 role)
+  const getRole = () => {
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.role || null;
+      } catch (error) {
+        console.error("Token decoding error:", error);
+      }
+    }
+    return null;
+  };
+  const role = getRole();
+  // 若角色為 customer，則為唯讀模式
+  const isReadOnly = role === "customer";
+
+  // 節點資料
   const [nodes, setNodes] = useState([]);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [draggingNodeId, setDraggingNodeId] = useState(null);
   const [resizingNodeId, setResizingNodeId] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  // 新增顯示模式：flowchart 或 list
+  const [displayMode, setDisplayMode] = useState("flowchart");
+  // 用來儲存每個 Phase 是否摺疊的狀態
+  const [collapsedPhases, setCollapsedPhases] = useState({});
 
-  // 讀取流程圖資料，依模式選擇 API
+  // 讀取流程圖資料
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -151,7 +197,9 @@ const CustomFlowChartEditor = () => {
           containerId: item.containerId || null,
           children: item.children || [],
           status: (item.type === "phase" || item.type === "task") ? (item.status || "未開始") : item.status,
-          shape: (item.type === "phase" || item.type === "task") ? (item.shape || "rectangle") : item.shape
+          shape: (item.type === "phase" || item.type === "task") ? (item.shape || "rectangle") : item.shape,
+          // 新增顯示控制屬性，預設 true
+          showInFlowchart: item.showInFlowchart !== false
         }));
         setNodes(mapped);
       } catch (error) {
@@ -174,6 +222,52 @@ const CustomFlowChartEditor = () => {
     );
   };
 
+// 新增箭頭控制點
+const handleAddControlPoint = (nodeId) => {
+  if (isReadOnly) return;
+  
+  setNodes(prevNodes => 
+    prevNodes.map(n => {
+      if (n.id === nodeId && n.type === "arrow") {
+        // 計算新控制點的位置 (在最後一點和倒數第二點之間)
+        const points = [...n.points];
+        const lastIdx = points.length - 1;
+        const newPoint = {
+          x: (points[lastIdx].x + points[lastIdx-1].x) / 2,
+          y: (points[lastIdx].y + points[lastIdx-1].y) / 2
+        };
+        
+        // 在倒數第二點之後插入新點
+        points.splice(lastIdx, 0, newPoint);
+        
+        return { ...n, points };
+      }
+      return n;
+    })
+  );
+};
+
+// 刪除箭頭控制點
+const handleDeleteControlPoint = (nodeId, pointIndex) => {
+  if (isReadOnly) return;
+  
+  setNodes(prevNodes => 
+    prevNodes.map(n => {
+      if (n.id === nodeId && n.type === "arrow") {
+        // 保證至少保留兩個控制點
+        if (n.points.length <= 2) return n;
+        
+        // 不允許刪除首尾控制點
+        if (pointIndex === 0 || pointIndex === n.points.length - 1) return n;
+        
+        const newPoints = n.points.filter((_, idx) => idx !== pointIndex);
+        return { ...n, points: newPoints };
+      }
+      return n;
+    })
+  );
+};
+
   // 處理 children 欄位（逗號分隔轉陣列）
   const handleChildrenChange = (e) => {
     if (!selectedNodeId) return;
@@ -185,8 +279,24 @@ const CustomFlowChartEditor = () => {
     );
   };
 
-  // 拖曳開始
+  // 切換核取方塊，設定節點是否在流程圖中顯示
+  const handleToggleShow = (nodeId, value) => {
+    setNodes(prevNodes =>
+      prevNodes.map(n => n.id === nodeId ? { ...n, showInFlowchart: value } : n)
+    );
+  };
+
+  // 切換 Phase 摺疊狀態
+  const toggleCollapse = (phaseId) => {
+    setCollapsedPhases(prev => ({
+      ...prev,
+      [phaseId]: !prev[phaseId]
+    }));
+  };
+
+  // 若為唯讀模式，則不執行拖曳與縮放操作
   const handleMouseDown = (e, nodeId) => {
+    if (isReadOnly) return;
     e.stopPropagation();
     const nodeElem = e.currentTarget;
     const rect = nodeElem.getBoundingClientRect();
@@ -194,8 +304,8 @@ const CustomFlowChartEditor = () => {
     setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
-  // 拖曳移動：更新拖曳節點及其所有後代（遞迴更新）
   const handleMouseMove = (e) => {
+    if (isReadOnly) return;
     if (draggingNodeId) {
       setNodes(prevNodes => {
         const draggedNode = prevNodes.find(n => n.id === draggingNodeId);
@@ -240,8 +350,8 @@ const CustomFlowChartEditor = () => {
     }
   };
 
-  // 拖曳/縮放結束：檢查是否落入 Phase 或 Task 節點內，更新 containerId 與父節點 children
   const handleMouseUp = () => {
+    if (isReadOnly) return;
     if (draggingNodeId) {
       setNodes(prevNodes => {
         const draggedNode = prevNodes.find(n => n.id === draggingNodeId);
@@ -289,14 +399,15 @@ const CustomFlowChartEditor = () => {
     }
   };
 
-  // 節點選取
+  // 節點選取（唯讀模式也可點選查看資訊）
   const handleSelectNode = (e, nodeId) => {
     e.stopPropagation();
     setSelectedNodeId(nodeId);
   };
 
-  // 開始縮放（點擊右下角手把）
+  // 開始縮放
   const handleResizeMouseDown = (e, nodeId) => {
+    if (isReadOnly) return;
     e.stopPropagation();
     if (!selectedNode) return;
     const containerRect = containerRef.current.getBoundingClientRect();
@@ -309,9 +420,9 @@ const CustomFlowChartEditor = () => {
     });
   };
 
-  // 刪除節點
+  // 刪除節點（唯讀模式不可操作）
   const handleDeleteNode = () => {
-    if (!selectedNodeId) return;
+    if (isReadOnly || !selectedNodeId) return;
     setNodes(prevNodes =>
       prevNodes.filter(n => n.id !== selectedNodeId)
         .map(n => n.containerId === selectedNodeId ? { ...n, containerId: null } : n)
@@ -319,27 +430,122 @@ const CustomFlowChartEditor = () => {
     setSelectedNodeId(null);
   };
 
-  // 新增節點：根據 type 新增，對於 phase 與 task 預設 shape 為 rectangle
+  // 新增節點（唯讀模式不可操作）
   const handleAddNewNode = (type = "task") => {
-    const newNode = {
-      id: `${Date.now()}`,
-      type,
-      label: type === "phase" ? "New Phase" : "New Node",
-      description: "",
-      link: "",
-      extras: [],
-      children: [],
-      containerId: null,
-      position: { x: 50, y: 50 },
-      size: { width: NODE_WIDTH_DEFAULT, height: NODE_HEIGHT_DEFAULT },
-      status: (type === "phase" || type === "task") ? "未開始" : "",
-      shape: (type === "phase" || type === "task") ? "rectangle" : ""
-    };
+    if (isReadOnly) return;
+    let newNode = null;
+    // 新增節點函數中的箭頭部分
+if (type === "arrow") {
+  // 預設箭頭的寬高與控制點（points 為相對於箭頭區塊的座標）
+  newNode = {
+    id: `arrow_${Date.now()}`,
+    type: "arrow",
+    label: "Arrow",
+    points: [
+      { x: 10, y: NODE_HEIGHT_DEFAULT / 2 },
+      { x: NODE_WIDTH_DEFAULT - 10, y: NODE_HEIGHT_DEFAULT / 2 }
+    ],
+    position: { x: 100, y: 100 },
+    size: { width: NODE_WIDTH_DEFAULT, height: NODE_HEIGHT_DEFAULT },
+    showInFlowchart: true
+  };
+
+    } else {
+      newNode = {
+        id: `${Date.now()}`,
+        type,
+        label: type === "phase" ? "New Phase" : "New Node",
+        description: "",
+        link: "",
+        extras: [],
+        children: [],
+        containerId: null,
+        position: { x: 50, y: 50 },
+        size: { width: NODE_WIDTH_DEFAULT, height: NODE_HEIGHT_DEFAULT },
+        status: (type === "phase" || type === "task") ? "未開始" : "",
+        shape: (type === "phase" || type === "task") ? "rectangle" : "",
+        showInFlowchart: true
+      };
+    }
     setNodes(prev => [...prev, newNode]);
   };
 
-  // 儲存流程圖，根據模式選擇 API 路徑
+// 2. 新增狀態用於拖曳箭頭的控制點
+const [draggingControlPoint, setDraggingControlPoint] = useState(null);
+
+// 處理拖曳控制點
+// 修改控制點鼠標事件處理
+const handleControlPointMouseDown = (e, nodeId, pointIndex) => {
+  e.stopPropagation();
+  
+  // 右鍵顯示菜單
+  if (e.button === 2) {
+    e.preventDefault();
+    // 不允許刪除首尾控制點
+    if (pointIndex !== 0 && pointIndex !== nodes.find(n => n.id === nodeId).points.length - 1) {
+      handleDeleteControlPoint(nodeId, pointIndex);
+    }
+    return;
+  }
+  
+  // 取得 container 的偏移量（方便計算相對座標）
+  const containerRect = containerRef.current.getBoundingClientRect();
+  setDraggingControlPoint({
+    nodeId,
+    pointIndex,
+    offsetX: e.clientX - containerRect.left,
+    offsetY: e.clientY - containerRect.top
+  });
+};
+
+useEffect(() => {
+  const handleControlPointMouseMove = (e) => {
+    if (!draggingControlPoint) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const newX = e.clientX - containerRect.left;
+    const newY = e.clientY - containerRect.top;
+    const dx = newX - draggingControlPoint.offsetX;
+    const dy = newY - draggingControlPoint.offsetY;
+    setNodes(prevNodes =>
+      prevNodes.map(n => {
+        if (n.id === draggingControlPoint.nodeId && n.type === "arrow") {
+          // 更新指定控制點，注意這裡控制點為相對於箭頭區塊的座標，
+          // 假設箭頭節點不會被縮放（或縮放時也更新 points）
+          const newPoints = n.points.map((pt, idx) =>
+            idx === draggingControlPoint.pointIndex
+              ? { x: pt.x + dx, y: pt.y + dy }
+              : pt
+          );
+          return { ...n, points: newPoints };
+        }
+        return n;
+      })
+    );
+    // 更新拖曳起始點
+    setDraggingControlPoint({
+      ...draggingControlPoint,
+      offsetX: newX,
+      offsetY: newY
+    });
+  };
+
+  const handleControlPointMouseUp = () => {
+    setDraggingControlPoint(null);
+  };
+
+  window.addEventListener("mousemove", handleControlPointMouseMove);
+  window.addEventListener("mouseup", handleControlPointMouseUp);
+  return () => {
+    window.removeEventListener("mousemove", handleControlPointMouseMove);
+    window.removeEventListener("mouseup", handleControlPointMouseUp);
+  };
+}, [draggingControlPoint]);
+
+
+
+  // 儲存流程圖（唯讀模式不可操作）
   const handleSave = async () => {
+    if (isReadOnly) return;
     try {
       const url = isTemplateMode
         ? `${API_URL}/templates/${realId}`
@@ -355,7 +561,7 @@ const CustomFlowChartEditor = () => {
     }
   };
 
-  // 下載流程圖 JSON，附加 name 欄位
+  // 下載流程圖 JSON
   const handleDownloadFlowchart = () => {
     const templateName = prompt("請輸入模板名稱：", `Flowchart Template ${realId}`);
     const exportData = {
@@ -371,8 +577,9 @@ const CustomFlowChartEditor = () => {
     a.remove();
   };
 
-  // 上傳流程圖 JSON 檔案並套用
+  // 上傳流程圖 JSON
   const handleUploadFlowchart = (e) => {
+    if (isReadOnly) return;
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -391,66 +598,375 @@ const CustomFlowChartEditor = () => {
     reader.readAsText(file);
   };
 
-  return (
-    <div>
-      <h2>Custom Flow Chart Editor {isTemplateMode ? "(Template Mode)" : ""}</h2>
-      <div style={{ marginBottom: "10px" }}>
-        <button onClick={() => handleAddNewNode("task")}>Add Task</button>
+  // Header 區塊，根據唯讀模式隱藏編輯相關按鈕
+const renderHeader = () => (
+  <div style={{ marginBottom: "10px" }}>
+    <button onClick={() => setDisplayMode("flowchart")}>Flowchart View</button>
+    <button onClick={() => setDisplayMode("list")} style={{ marginLeft: "10px" }}>List View</button>
+    {!isReadOnly && (
+      <>
+        <button onClick={() => handleAddNewNode("task")} style={{ marginLeft: "10px" }}>Add Task</button>
         <button onClick={() => handleAddNewNode("phase")} style={{ marginLeft: "10px" }}>Add Phase</button>
+        <button onClick={() => handleAddNewNode("arrow")} style={{ marginLeft: "10px" }}>Add Arrow</button>
         <button onClick={handleSave} style={{ marginLeft: "10px" }}>Save Flow Chart</button>
         <button onClick={handleDownloadFlowchart} style={{ marginLeft: "10px" }}>Download Flowchart</button>
         <label style={{ marginLeft: "10px" }}>
           Import Flowchart:
           <input type="file" accept=".json" onChange={handleUploadFlowchart} style={{ marginLeft: "5px" }} />
         </label>
+      </>
+    )}
+  </div>
+);
+
+  // 列表模式：以表格呈現 Phase 與 Task（唯讀模式下僅可查看與設定 Show in Flowchart）
+  const renderListView = () => {
+    // 取出所有 Phase 節點
+    const phases = nodes.filter(n => n.type === "phase");
+    // 取出未指定 container 的 Task
+    const unassignedTasks = nodes.filter(n => n.type === "task" && !n.containerId);
+  
+    // 更新節點函式
+    const updateNode = (nodeId, field, value) => {
+      if (isReadOnly) return;
+      setNodes(prevNodes =>
+        prevNodes.map(n => n.id === nodeId ? { ...n, [field]: value } : n)
+      );
+    };
+  
+    return (
+      <div style={{ padding: "20px" }}>
+        <h2>Flowchart List View</h2>
+        <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ backgroundColor: "#ddd" }}>
+              <th>Type</th>
+              <th>Label</th>
+              <th>Description</th>
+              <th>Link</th>
+              <th>Status</th>
+              <th>Show in Flowchart</th>
+            </tr>
+          </thead>
+          <tbody>
+            {phases.map(phase => (
+              <React.Fragment key={phase.id}>
+                <tr style={{ backgroundColor: "#f0f0f0" }}>
+                  <td>Phase</td>
+                  <td>
+                    <input
+                      type="text"
+                      value={phase.label}
+                      onChange={(e) => updateNode(phase.id, "label", e.target.value)}
+                      disabled={isReadOnly}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={phase.description}
+                      onChange={(e) => updateNode(phase.id, "description", e.target.value)}
+                      disabled={isReadOnly}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={phase.link || ""}
+                      onChange={(e) => updateNode(phase.id, "link", e.target.value)}
+                      disabled={isReadOnly}
+                    />
+                  </td>
+                  <td>
+                    <select
+                      value={phase.status}
+                      onChange={(e) => updateNode(phase.id, "status", e.target.value)}
+                      disabled={isReadOnly}
+                    >
+                      <option value="未開始">未開始</option>
+                      <option value="規劃中">規劃中</option>
+                      <option value="進行中">進行中</option>
+                      <option value="已完成">已完成</option>
+                      <option value="自訂">自訂</option>
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={phase.showInFlowchart !== false}
+                      onChange={(e) => updateNode(phase.id, "showInFlowchart", e.target.checked)}
+                      disabled={isReadOnly}
+                    />
+                  </td>
+                </tr>
+                { !collapsedPhases[phase.id] &&
+                  nodes.filter(n => n.type === "task" && String(n.containerId) === String(phase.id))
+                    .map(task => (
+                      <tr key={task.id}>
+                        <td>Task</td>
+                        <td>
+                          <input
+                            type="text"
+                            value={task.label}
+                            onChange={(e) => updateNode(task.id, "label", e.target.value)}
+                            disabled={isReadOnly}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={task.description}
+                            onChange={(e) => updateNode(task.id, "description", e.target.value)}
+                            disabled={isReadOnly}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={task.link || ""}
+                            onChange={(e) => updateNode(task.id, "link", e.target.value)}
+                            disabled={isReadOnly}
+                          />
+                        </td>
+                        <td>
+                          <select
+                            value={task.status}
+                            onChange={(e) => updateNode(task.id, "status", e.target.value)}
+                            disabled={isReadOnly}
+                          >
+                            <option value="未開始">未開始</option>
+                            <option value="規劃中">規劃中</option>
+                            <option value="進行中">進行中</option>
+                            <option value="已完成">已完成</option>
+                            <option value="自訂">自訂</option>
+                          </select>
+                        </td>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={task.showInFlowchart !== false}
+                            onChange={(e) => updateNode(task.id, "showInFlowchart", e.target.checked)}
+                            disabled={isReadOnly}
+                          />
+                        </td>
+                      </tr>
+                    ))
+                }
+              </React.Fragment>
+            ))}
+            {unassignedTasks.length > 0 && (
+              <>
+                <tr>
+                  <td colSpan="6" style={{ backgroundColor: "#ccc", fontWeight: "bold" }}>
+                    Unassigned Tasks
+                  </td>
+                </tr>
+                {unassignedTasks.map(task => (
+                  <tr key={task.id}>
+                    <td>Task</td>
+                    <td>
+                      <input
+                        type="text"
+                        value={task.label}
+                        onChange={(e) => updateNode(task.id, "label", e.target.value)}
+                        disabled={isReadOnly}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={task.description}
+                        onChange={(e) => updateNode(task.id, "description", e.target.value)}
+                        disabled={isReadOnly}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={task.link || ""}
+                        onChange={(e) => updateNode(task.id, "link", e.target.value)}
+                        disabled={isReadOnly}
+                      />
+                    </td>
+                    <td>
+                      <select
+                        value={task.status}
+                        onChange={(e) => updateNode(task.id, "status", e.target.value)}
+                        disabled={isReadOnly}
+                      >
+                        <option value="未開始">未開始</option>
+                        <option value="規劃中">規劃中</option>
+                        <option value="進行中">進行中</option>
+                        <option value="已完成">已完成</option>
+                        <option value="自訂">自訂</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={task.showInFlowchart !== false}
+                        onChange={(e) => updateNode(task.id, "showInFlowchart", e.target.checked)}
+                        disabled={isReadOnly}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </>
+            )}
+          </tbody>
+        </table>
       </div>
-      <div
-        ref={containerRef}
-        style={{ position: "relative", width: "100%", height: "600px", border: "1px solid #ccc", backgroundColor: "#fafafa" }}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-      >
-        {nodes.map(node => {
-          const zIndex = node.containerId ? 10 : (node.type === "phase" || node.type === "task" ? 5 : 1);
-          return (
+    );
+  };
+
+  // 流程圖模式：只顯示 showInFlowchart 為 true 的節點
+  const renderFlowchartView = () => (
+    <div
+      ref={containerRef}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "600px",
+        border: "1px solid #ccc",
+        backgroundColor: "#fafafa"
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
+{nodes
+  .filter(node => node.showInFlowchart !== false)
+  .map(node => {
+    if (node.type === "arrow") {
+      return (
+        <div
+          key={node.id}
+          style={{
+            position: "absolute",
+            left: node.position.x,
+            top: node.position.y,
+            width: node.size.width,
+            height: node.size.height,
+            border: selectedNodeId === node.id ? "2px dashed red" : "0px dashed #999",
+            backgroundColor: "transparent",
+            cursor: isReadOnly ? "default" : "move",
+            zIndex: 1
+          }}
+          onMouseDown={(e) => handleMouseDown(e, node.id)}
+          onClick={(e) => handleSelectNode(e, node.id)}
+        >
+          {renderArrow(node)}
+          
+          {/* 控制點 - 僅在選中狀態且非唯讀模式時顯示 */}
+          {!isReadOnly && selectedNodeId === node.id && node.points.map((point, index) => (
             <div
-              key={node.id}
+              key={`point-${index}`}
               style={{
                 position: "absolute",
-                left: node.position.x,
-                top: node.position.y,
-                width: node.size.width,
-                height: node.size.height,
-                border: selectedNodeId === node.id ? "2px solid red" : "1px solid #333",
-                boxSizing: "border-box",
-                backgroundColor: (node.type === "phase" || node.type === "task") ? getStatusColor(node) : "#fff",
-                cursor: "move",
-                zIndex,
-                ...getShapeStyle(node.shape)
+                left: point.x - 4,
+                top: point.y - 4,
+                width: 8,
+                height: 8,
+                backgroundColor: "blue",
+                border: "1px solid white",
+                borderRadius: "50%",
+                cursor: "pointer",
+                zIndex: 20
               }}
-              onMouseDown={(e) => handleMouseDown(e, node.id)}
-              onClick={(e) => handleSelectNode(e, node.id)}
+              onMouseDown={(e) => handleControlPointMouseDown(e, node.id, index)}
+            />
+          ))}
+          
+          {/* 新增控制點按鈕 - 僅在選中狀態且非唯讀模式時顯示 */}
+          {!isReadOnly && selectedNodeId === node.id && (
+            <button
+              style={{
+                position: "absolute",
+                right: 0,
+                top: -25,
+                fontSize: "10px",
+                padding: "2px 5px"
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddControlPoint(node.id);
+              }}
             >
-              {renderNodeContent(node)}
-              {selectedNodeId === node.id && (
-                <div
-                  style={{
-                    position: "absolute",
-                    right: 0,
-                    bottom: 0,
-                    width: RESIZE_HANDLE_SIZE,
-                    height: RESIZE_HANDLE_SIZE,
-                    backgroundColor: "gray",
-                    cursor: "se-resize"
-                  }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, node.id)}
-                />
-              )}
-            </div>
-          );
-        })}
+              + Point
+            </button>
+          )}
+          
+          {/* 縮放控制點 */}
+          {!isReadOnly && selectedNodeId === node.id && (
+            <div
+              style={{
+                position: "absolute",
+                right: 0,
+                bottom: 0,
+                width: RESIZE_HANDLE_SIZE,
+                height: RESIZE_HANDLE_SIZE,
+                backgroundColor: "gray",
+                cursor: "se-resize"
+              }}
+              onMouseDown={(e) => handleResizeMouseDown(e, node.id)}
+            />
+          )}
+        </div>
+      );
+    }
+    
+    // 現有的非箭頭節點渲染代碼...
+    const zIndex = node.containerId
+      ? 10
+      : (node.type === "phase" || node.type === "task" ? 5 : 1);
+    return (
+      <div
+        key={node.id}
+        style={{
+          position: "absolute",
+          left: node.position.x,
+          top: node.position.y,
+          width: node.size.width,
+          height: node.size.height,
+          border: selectedNodeId === node.id ? "2px solid red" : "1px solid #333",
+          boxSizing: "border-box",
+          backgroundColor:
+            (node.type === "phase" || node.type === "task")
+              ? getStatusColor(node)
+              : "#fff",
+          cursor: isReadOnly ? "default" : "move",
+          zIndex,
+          ...getShapeStyle(node.shape)
+        }}
+        onMouseDown={(e) => handleMouseDown(e, node.id)}
+        onClick={(e) => handleSelectNode(e, node.id)}
+      >
+        {renderNodeContent(node)}
+        {!isReadOnly && selectedNodeId === node.id && (
+          <div
+            style={{
+              position: "absolute",
+              right: 0,
+              bottom: 0,
+              width: RESIZE_HANDLE_SIZE,
+              height: RESIZE_HANDLE_SIZE,
+              backgroundColor: "gray",
+              cursor: "se-resize"
+            }}
+            onMouseDown={(e) => handleResizeMouseDown(e, node.id)}
+          />
+        )}
       </div>
-      {selectedNode && (
+    );
+  })}
+    </div>
+  );
+
+  return (
+    <div>
+      <h2>Custom Flow Chart Editor {isTemplateMode ? "(Template Mode)" : ""}</h2>
+      {renderHeader()}
+      {displayMode === "flowchart" ? renderFlowchartView() : renderListView()}
+      {!isReadOnly && selectedNode && (
         <div style={{ marginTop: "20px", border: "1px solid #ccc", padding: "10px" }}>
           <h3>Edit Node Properties</h3>
           <div>

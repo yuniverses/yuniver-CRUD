@@ -52,7 +52,7 @@ function HomePage() {
           </li>
           )}
           {/* 僅當用戶角色為 god 或 admin 時才顯示 */}
-          {hasAccess(role, ["god", "admin", "employee"]) && (
+          {hasAccess(role, ["god", "admin"]) && (
             <li>
               <Link to="/project-manager">專案管理</Link>
             </li>
