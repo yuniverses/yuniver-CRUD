@@ -10,10 +10,12 @@ if (token) {
   axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 }
 
-export const registerUser = async (username, password) => {
+export const registerUser = async (username, password, name, email) => {
   const res = await axios.post(`${API_URL}/auth/register`, {
     username,
     password,
+    name,
+    email,
   });
   return res.data;
 };
