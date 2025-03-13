@@ -1,303 +1,611 @@
+//client/src/css/main.scss
+
 // 主體容器設置
-.project-details-container {
+.yuniver-container {
   display: flex;
-  height: 100vh;
+  flex-direction: column;
+  min-height: 100vh;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  background-color: #f7f7f7;
-
+  background-color: #ffffff;
+  
+  // 頂部導航條
+  .yuniver-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 35px;
+    border-bottom: 1px solid #e0e0e0;
+    
+    .yuniver-logo {
+      display: flex;
+      flex-direction: column;
+      
+      h1 {
+        font-size: 24px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        margin: 0;
+        
+        .registered-mark {
+          font-size: 14px;
+          vertical-align: super;
+        }
+      }
+      
+      .subtitle {
+        font-size: 12px;
+        color: #666;
+        margin: 0;
+      }
+    }
+    
+    .main-nav {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      
+      a {
+        color: #333;
+        text-decoration: none;
+        font-size: 14px;
+        padding: 5px 10px;
+        
+        &.active {
+          font-weight: bold;
+          border-bottom: 2px solid #333;
+        }
+        
+        &.logout-btn {
+          color: #333;
+        }
+      }
+    }
+  }
+  
+  // 主要內容區域
+  .yuniver-content {
+    display: flex;
+    flex: 1;
+    height: calc(100vh - 70px);
+  }
+  
   // 左側側邊欄
-  .sidebar {
+  .yuniver-sidebar {
     width: 250px;
-    border-right: 1px solid #e0e0e0;
-    padding: 20px;
+    padding: 0;
     background-color: #ffffff;
-    box-shadow: 4px 0 6px rgba(0, 0, 0, 0.1);
-
-    h2 {
-      font-size: 18px;
-      font-weight: bold;
-      color: #333;
-      margin-bottom: 10px;
-    }
-
-    p {
-      font-size: 14px;
-      color: #777;
-      margin-bottom: 10px;
-    }
-
-    // 頁面列表
-    ul {
-      list-style: none;
-      padding: 0;
-
-      li {
-        font-size: 14px;
-        color: #555;
-        padding: 8px 15px;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-
-        &:hover {
-          background-color: #e0e0e0;
-        }
-
-        // 按鈕區域（hover顯示）
-        .file-actions {
-          display: none;
-          position: absolute;
-          right: 10px;
-          top: 50%;
-          transform: translateY(-50%);
-
-          button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            margin-right: 5px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-
-            &:hover {
-              background-color: #0056b3;
-            }
-          }
-        }
-
-        // 當li hover時顯示按鈕
-        &:hover .file-actions {
-          display: block;
-        }
-      }
-    }
-
-    button {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      padding: 10px;
-      font-size: 14px;
-      cursor: pointer;
-      border-radius: 5px;
-      transition: background-color 0.3s ease;
-
-      &:hover {
-        background-color: #0056b3;
-      }
-    }
-  }
-
-  // 中間區域: 檔案列表
-  // 文件列表項目的按鈕隱藏及顯示樣式
-  .files-section {
-    width: 300px;
-    border-right: 1px solid #e0e0e0;
-    padding: 20px;
-    background-color: #ffffff;
-    box-shadow: 4px 0 6px rgba(0, 0, 0, 0.1);
-
-    ul {
-      list-style: none;
-      padding: 0;
-      margin-bottom: 20px;
-
-      li {
-        font-size: 14px;
-        color: #555;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 15px;
-        border-radius: 4px;
-        margin-bottom: 10px;
-        position: relative;
-        transition: background-color 0.3s ease;
-
-        &:hover {
-          background-color: #f4f4f4;
-        }
-
-        .file-actions {
-          display: none; // 初始隱藏按鈕
-          position: absolute;
-          right: 10px;
-          top: 50%;
-          transform: translateY(-50%);
+    border-right: 1px dotted #ccc;
+    overflow-y: auto;
+    
+    .project-info {
+      padding: 20px;
+      
+      .info-section {
+        margin-bottom: 15px;
+        
+        h4 {
           font-size: 12px;
-
+          color: #777;
+          margin: 0 0 5px 0;
+          font-weight: normal;
+        }
+        
+        .info-value {
+          font-size: 14px;
+          color: #333;
+          margin: 0;
+          padding-bottom: 5px;
+          border-bottom: 1px solid #eee;
+        }
+      }
+    }
+    
+    .section-divider {
+      height: 1px;
+      background-color: #e0e0e0;
+      margin: 15px 0;
+    }
+    
+    .project-activities {
+      padding: 8px;
+      background-color: #333;
+      border-radius: 5px;
+      .section-title {
+        font-size: 12px;
+        color: #d8d8d8;
+        margin: 0 0 5px 0;
+        font-weight: normal;
+        
+      }
+      
+      .activity-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        
+        .activity-item {
+          margin-bottom: 10px;
+          
           button {
-            background-color: #007bff;
-            color: white;
+            background-color: #484848;
             border: none;
-            padding: 5px 8px;
-            border-radius: 5px;
+            padding: 5px 0;
+            font-size: 14px;
+            color: #ffffff;
             cursor: pointer;
-            transition: background-color 0.3s ease;
-
+            text-align: left;
+            width: 100%;
+            
             &:hover {
-              background-color: #0056b3;
+              text-decoration: underline;
             }
           }
         }
-
-        // 當li hover時顯示按鈕
-        &:hover .file-actions {
-          display: block;
+      }
+      
+      .no-items {
+        color: #999;
+        font-size: 14px;
+      }
+    }
+    
+    .pages-section {
+      padding: 0 20px;
+      
+      .section-title {
+        font-size: 12px;
+        color: #777;
+        margin: 0 0 5px 0;
+        font-weight: normal;
+      }
+      
+      .page-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        
+        .page-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 0;
+          border-bottom: 1px solid #f1f1f1;
+          
+          &.active {
+            .page-name {
+              font-weight: bold;
+            }
+          }
+          
+          .page-name {
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+            
+            &:hover {
+              text-decoration: underline;
+            }
+          }
+          
+          .page-actions {
+            display: none;
+            
+            .action-btn {
+              background: none;
+              border: none;
+              color: #777;
+              cursor: pointer;
+              font-size: 12px;
+              margin-left: 5px;
+              
+              &:hover {
+                color: #333;
+              }
+              
+              &.delete-btn {
+                color: #d9534f;
+              }
+            }
+          }
+          
+          &:hover .page-actions {
+            display: flex;
+          }
+        }
+      }
+      
+      .add-btn {
+        background: none;
+        border: none;
+        color: #333;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 10px 0;
+        width: 100%;
+        text-align: left;
+        
+        &:hover {
+          text-decoration: underline;
         }
       }
     }
-
-    .action-button {
-      background-color: #28a745;
-      color: white;
-      padding: 10px;
-      font-size: 14px;
-      border: none;
-      cursor: pointer;
-      border-radius: 5px;
-      width: 100%;
-      transition: background-color 0.3s ease;
-
-      &:hover {
-        background-color: #218838;
+    
+    .sidebar-actions {
+      padding: 20px;
+      
+      .action-link {
+        display: block;
+        background: none;
+        border: none;
+        color: #333;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 8px 0;
+        width: 100%;
+        text-align: left;
+        
+        &:hover {
+          text-decoration: underline;
+        }
       }
     }
   }
-
+  
+  // 中間區域: 檔案列表
+  .files-column {
+    width: 250px;
+    background-color: #f9f9f9;
+    border-right: 1px dotted #ccc;
+    padding: 20px;
+    overflow-y: auto;
+    
+    .section-header {
+      font-size: 16px;
+      color: #333;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+    
+    .files-container {
+      .file-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        
+        .file-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px;
+          margin-bottom: 10px;
+          border-radius: 0;
+          background-color: #fff;
+          border-left: 3px solid transparent;
+          
+          &:hover {
+            border-left-color: #333;
+          }
+          
+          &.active {
+            border-left-color: #333;
+            font-weight: bold;
+          }
+          
+          .file-name {
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            
+            &:before {
+              content: "📄";
+              margin-right: 8px;
+            }
+          }
+          
+          .file-actions {
+            display: flex;
+            
+            .file-action-btn {
+              background: none;
+              border: none;
+              color: #777;
+              cursor: pointer;
+              font-size: 12px;
+              margin-left: 5px;
+              
+              &:hover {
+                color: #333;
+              }
+            }
+          }
+        }
+      }
+      
+      .file-upload-container {
+        margin-top: 20px;
+        
+        .file-upload-label {
+          display: block;
+          background-color: #f1f1f1;
+          color: #333;
+          padding: 10px;
+          text-align: center;
+          border-radius: 0;
+          cursor: pointer;
+          margin-bottom: 10px;
+          font-size: 14px;
+          
+          &:hover {
+            background-color: #e0e0e0;
+          }
+          
+          .file-input {
+            display: none;
+          }
+        }
+        
+        .create-doc-btn {
+          width: 100%;
+          background-color: #f1f1f1;
+          color: #333;
+          border: none;
+          padding: 10px;
+          text-align: center;
+          border-radius: 0;
+          cursor: pointer;
+          font-size: 14px;
+          
+          &:hover {
+            background-color: #e0e0e0;
+          }
+        }
+      }
+    }
+    
+    .no-selection-message {
+      color: #999;
+      font-size: 14px;
+      text-align: center;
+    }
+  }
+  
   // 預覽區域
-  .preview-section {
+  .preview-column {
     flex-grow: 1;
     padding: 20px;
     background-color: #ffffff;
-
-    h2 {
+    overflow-y: auto;
+    
+    .section-header {
       font-size: 16px;
       color: #333;
+      margin-top: 0;
       margin-bottom: 20px;
     }
-
-    .preview-content {
-      width: 100%;
-      height: 80%;
+    
+    .preview-container {
+      height: calc(100% - 60px);
+      
+      .document-editor {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        
+        .quill-editor {
+          flex-grow: 1;
+          border: 1px solid #e0e0e0;
+          margin-bottom: 15px;
+          
+          .ql-container {
+            height: calc(100% - 42px); // Adjust for toolbar height
+          }
+        }
+        
+        .editor-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          
+          .editor-btn {
+            background-color: #f1f1f1;
+            color: #333;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 14px;
+            
+            &:hover {
+              background-color: #e0e0e0;
+            }
+            
+            &.save-btn {
+              background-color: #333;
+              color: white;
+              
+              &:hover {
+                background-color: #555;
+              }
+            }
+          }
+        }
+      }
+      
+      .pdf-preview, .image-preview, .audio-preview, .video-preview {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        
+        .pdf-frame, .preview-image, .audio-player, .video-player {
+          flex-grow: 1;
+          border: 1px solid #e0e0e0;
+          margin-bottom: 15px;
+          max-height: calc(100% - 60px);
+          object-fit: contain;
+        }
+        
+        .download-btn {
+          align-self: flex-end;
+          background-color: #f1f1f1;
+          color: #333;
+          border: none;
+          padding: 8px 15px;
+          border-radius: 0;
+          cursor: pointer;
+          font-size: 14px;
+          
+          &:hover {
+            background-color: #e0e0e0;
+          }
+        }
+      }
+      
+      .unsupported-file {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        
+        p {
+          margin-bottom: 20px;
+          color: #999;
+        }
+        
+        .download-btn {
+          background-color: #f1f1f1;
+          color: #333;
+          border: none;
+          padding: 8px 15px;
+          border-radius: 0;
+          cursor: pointer;
+          font-size: 14px;
+          
+          &:hover {
+            background-color: #e0e0e0;
+          }
+        }
+      }
+    }
+    
+    .no-file-selected {
+      height: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
-      background-color: #f9f9f9;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 10px;
-
-      img,
-      video,
-      audio {
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
-      }
-
-      .ql-container {
-        width: 100%;
-        height: 100%;
-      }
-
-      button {
-        margin-top: 10px;
-        padding: 10px 20px;
-        background-color: #007bff;
-        color: #fff;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-
-        &:hover {
-          background-color: #0056b3;
-        }
-
-        &.secondary {
-          background-color: #28a745;
-          &:hover {
-            background-color: #218838;
-          }
-        }
+      
+      p {
+        color: #999;
+        font-size: 14px;
       }
     }
   }
-
+  
   // 浮動的備註與訊息區
-  .floating-panel {
+  .floating-panels {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 300px;
-    background-color: #ffffff;
-    border: 1px solid #ccc;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    z-index: 10;
-
-    .toggle-button {
-      background-color: #f1f1f1;
-      color: #333;
-      font-size: 14px;
-      border: none;
-      padding: 8px;
-      width: 100%;
-      cursor: pointer;
-      border-radius: 5px;
-      margin-bottom: 10px;
-      text-align: left;
-      transition: background-color 0.3s ease;
-
-      &:hover {
-        background-color: #e8e8e8;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000;
+    
+    .notes-panel, .messages-panel {
+      width: 300px;
+      background-color: #ffffff;
+      border: 1px solid #e0e0e0;
+      border-radius: 0;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      
+      &.expanded {
+        height: auto;
+        max-height: 400px;
       }
-    }
-
-    .panel-content {
-      display: flex;
-      flex-direction: column;
-
-      input {
-        padding: 8px;
-        margin-bottom: 10px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-size: 14px;
+      
+      &.collapsed {
+        height: 40px;
       }
-
-      button {
-        background-color: #007bff;
-        color: white;
-        padding: 10px;
-        font-size: 14px;
+      
+      .panel-toggle {
+        width: 100%;
+        background-color: #f1f1f1;
+        color: #333;
         border: none;
+        padding: 10px;
+        text-align: left;
         cursor: pointer;
-        border-radius: 5px;
-        margin-top: 5px;
-
+        font-size: 14px;
+        
         &:hover {
-          background-color: #0056b3;
+          background-color: #e0e0e0;
         }
       }
-
-      ul {
-        padding-left: 20px;
-        list-style: none;
-
-        li {
+      
+      .panel-content {
+        padding: 15px;
+        max-height: 350px;
+        overflow-y: auto;
+        
+        .panel-title {
           font-size: 14px;
-          color: #555;
-          margin-bottom: 5px;
-
-          small {
-            font-size: 12px;
-            color: #aaa;
+          color: #333;
+          margin-top: 0;
+          margin-bottom: 15px;
+        }
+        
+        .notes-list, .messages-list {
+          list-style: none;
+          padding: 0;
+          margin: 0 0 15px 0;
+          
+          .note-item, .message-item {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f1f1f1;
+            
+            .note-content, .message-content {
+              display: block;
+              margin-bottom: 5px;
+            }
+            
+            .note-date, .message-date {
+              display: block;
+              font-size: 12px;
+              color: #999;
+            }
+          }
+        }
+        
+        .note-input-container, .message-input-container {
+          display: flex;
+          flex-direction: column;
+          
+          .note-input, .message-input {
+            border: 1px solid #e0e0e0;
+            padding: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+          }
+          
+          .add-note-btn, .add-message-btn {
+            align-self: flex-end;
+            background-color: #333;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 14px;
+            
+            &:hover {
+              background-color: #555;
+            }
           }
         }
       }
@@ -305,32 +613,37 @@
   }
 }
 
+
+
+
 // 全局設置
 body {
-  background-color: #f7f7f7;
   margin: 0;
+  padding: 0;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-}
-
-button {
-  cursor: pointer;
-}
-
-input[type="text"],
-input[type="file"] {
-  border: 1px solid #ccc;
-  padding: 8px;
-  margin-top: 5px;
-  border-radius: 4px;
-}
-
-h2,
-h3 {
-  font-size: 16px;
   color: #333;
 }
 
-p {
-  font-size: 14px;
-  color: #666;
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  
+  .loading-spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #333;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 }
+

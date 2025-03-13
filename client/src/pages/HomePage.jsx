@@ -58,6 +58,12 @@ function HomePage() {
             </li>
           )}
           {/* 僅當用戶角色為 god 或 admin 時才顯示 */}
+          {hasAccess(role, ["god", "admin","employee"]) && (
+            <li>
+              <Link to="/ProjectManagement">專案管理ALL</Link>
+            </li>
+          )}
+          {/* 僅當用戶角色為 god 或 admin 時才顯示 */}
           {hasAccess(role, ["god", "admin", "employee"]) && (
             <li>
             <Link to="/quotation">報價單</Link>

@@ -20,6 +20,7 @@ import CustomFlowChartEditor from "./pages/CustomFlowChartEditor";
 import TemplateLibrary from "./pages/TemplateLibrary";
 import UserManagement from "./pages/UserManagement";
 import ProjectSettings from "./pages/ProjectSettings";
+import ProjectManagementPage from "./pages/ProjectManagement";
 
 // 簡易判斷是否已登入並取得用戶角色
 const getRole = () => {
@@ -94,6 +95,16 @@ function App() {
           element={
             hasAccess(role, ["god", "admin", "employee"]) ? (
               <InternalFilesPage />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/ProjectManagement"
+          element={
+            hasAccess(role, ["god", "admin", "employee"]) ? (
+              <ProjectManagementPage />
             ) : (
               <Navigate to="/login" />
             )

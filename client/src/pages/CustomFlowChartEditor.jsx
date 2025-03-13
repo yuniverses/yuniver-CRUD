@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
-
+import "../css/main.css";
 // 預設尺寸與手把大小
 const NODE_WIDTH_DEFAULT = 140;
 const NODE_HEIGHT_DEFAULT = 80;
@@ -560,7 +560,35 @@ useEffect(() => {
       alert("Save failed.");
     }
   };
-
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // 如果焦點在 input 或 textarea 中，則不處理快捷鍵
+      const tag = e.target.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") {
+        return;
+      }
+  
+      // Delete 鍵刪除選中的節點
+      if (e.key === "Delete") {
+        e.preventDefault();
+        handleDeleteNode();
+      }
+  // Delete 鍵刪除選中的節點
+  if (e.key === "Backspace") {
+    e.preventDefault();
+    handleDeleteNode();
+  }
+      // Ctrl+S 或 Cmd+S 儲存流程圖
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+  
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleDeleteNode, handleSave]);
+  
   // 下載流程圖 JSON
   const handleDownloadFlowchart = () => {
     const templateName = prompt("請輸入模板名稱：", `Flowchart Template ${realId}`);
@@ -601,10 +629,11 @@ useEffect(() => {
   // Header 區塊，根據唯讀模式隱藏編輯相關按鈕
 const renderHeader = () => (
   <div style={{ marginBottom: "10px" }}>
-    <button onClick={() => setDisplayMode("flowchart")}>Flowchart View</button>
-    <button onClick={() => setDisplayMode("list")} style={{ marginLeft: "10px" }}>List View</button>
+    
     {!isReadOnly && (
       <>
+      <button onClick={() => setDisplayMode("flowchart")}>Flowchart View</button>
+      <button onClick={() => setDisplayMode("list")} style={{ marginLeft: "10px" }}>List View</button>
         <button onClick={() => handleAddNewNode("task")} style={{ marginLeft: "10px" }}>Add Task</button>
         <button onClick={() => handleAddNewNode("phase")} style={{ marginLeft: "10px" }}>Add Phase</button>
         <button onClick={() => handleAddNewNode("arrow")} style={{ marginLeft: "10px" }}>Add Arrow</button>
@@ -618,15 +647,49 @@ const renderHeader = () => (
     )}
   </div>
 );
+// 移動 Phase：在 nodes 陣列中僅針對 type === "phase" 部分調整順序
+const movePhase = (phaseId, direction) => {
+  if (isReadOnly) return;
+  setNodes(prevNodes => {
+    // 把 Phase 與其他節點分離
+    const phases = prevNodes.filter(n => n.type === "phase");
+    const others = prevNodes.filter(n => n.type !== "phase");
+    const index = phases.findIndex(p => p.id === phaseId);
+    if (index === -1) return prevNodes;
+    const newIndex = index + (direction === "up" ? -1 : 1);
+    if (newIndex < 0 || newIndex >= phases.length) return prevNodes;
+    // 交換順序
+    [phases[index], phases[newIndex]] = [phases[newIndex], phases[index]];
+    // 回傳新的 nodes 陣列：這裡假設 Phase 順序不影響其他節點位置
+    return [...phases, ...others];
+  });
+};
+
+// 移動 Task：僅針對屬於同一 Phase (containerId) 的 Task 進行交換
+const moveTask = (taskId, phaseId, direction) => {
+  if (isReadOnly) return;
+  setNodes(prevNodes => {
+    // 分離出屬於該 Phase 的 Task 與其他節點
+    const tasks = prevNodes.filter(n => n.type === "task" && String(n.containerId) === String(phaseId));
+    const others = prevNodes.filter(n => !(n.type === "task" && String(n.containerId) === String(phaseId)));
+    const index = tasks.findIndex(t => t.id === taskId);
+    if (index === -1) return prevNodes;
+    const newIndex = index + (direction === "up" ? -1 : 1);
+    if (newIndex < 0 || newIndex >= tasks.length) return prevNodes;
+    [tasks[index], tasks[newIndex]] = [tasks[newIndex], tasks[index]];
+    // 回傳新的 nodes 陣列：簡單合併（此方式僅適用於該 Phase 下 Task 都是連續的情況）
+    return [...others, ...tasks];
+  });
+};
 
   // 列表模式：以表格呈現 Phase 與 Task（唯讀模式下僅可查看與設定 Show in Flowchart）
   const renderListView = () => {
     // 取出所有 Phase 節點
     const phases = nodes.filter(n => n.type === "phase");
-    // 取出未指定 container 的 Task
+    // 取出未指定 container 的 Task（單獨任務）
     const unassignedTasks = nodes.filter(n => n.type === "task" && !n.containerId);
   
-    // 更新節點函式
+    // 更新節點函式（已在上面定義的 updateNode 函式）
     const updateNode = (nodeId, field, value) => {
       if (isReadOnly) return;
       setNodes(prevNodes =>
@@ -645,6 +708,7 @@ const renderHeader = () => (
               <th>Description</th>
               <th>Link</th>
               <th>Status</th>
+              <th>排序</th>
               <th>Show in Flowchart</th>
             </tr>
           </thead>
@@ -652,7 +716,13 @@ const renderHeader = () => (
             {phases.map(phase => (
               <React.Fragment key={phase.id}>
                 <tr style={{ backgroundColor: "#f0f0f0" }}>
-                  <td>Phase</td>
+                  <td>
+                    {/* 點擊箭頭展開/摺疊 */}
+                    <span onClick={() => toggleCollapse(phase.id)} style={{ cursor: "pointer", marginRight: "5px" }}>
+                      {collapsedPhases[phase.id] ? "▽" : "△"}
+                    </span>
+                    Phase
+                  </td>
                   <td>
                     <input
                       type="text"
@@ -691,6 +761,14 @@ const renderHeader = () => (
                     </select>
                   </td>
                   <td>
+                    {!isReadOnly && (
+                      <>
+                        <button onClick={() => movePhase(phase.id, "up")}>↑</button>
+                        <button onClick={() => movePhase(phase.id, "down")}>↓</button>
+                      </>
+                    )}
+                  </td>
+                  <td>
                     <input
                       type="checkbox"
                       checked={phase.showInFlowchart !== false}
@@ -699,11 +777,12 @@ const renderHeader = () => (
                     />
                   </td>
                 </tr>
-                { !collapsedPhases[phase.id] &&
+                {/* 若 Phase 沒有摺疊，則列出其下 Task */}
+                {!collapsedPhases[phase.id] &&
                   nodes.filter(n => n.type === "task" && String(n.containerId) === String(phase.id))
                     .map(task => (
                       <tr key={task.id}>
-                        <td>Task</td>
+                        <td style={{ paddingLeft: "20px" }}>Task</td>
                         <td>
                           <input
                             type="text"
@@ -742,6 +821,14 @@ const renderHeader = () => (
                           </select>
                         </td>
                         <td>
+                          {!isReadOnly && (
+                            <>
+                              <button onClick={() => moveTask(task.id, phase.id, "up")}>↑</button>
+                              <button onClick={() => moveTask(task.id, phase.id, "down")}>↓</button>
+                            </>
+                          )}
+                        </td>
+                        <td>
                           <input
                             type="checkbox"
                             checked={task.showInFlowchart !== false}
@@ -754,10 +841,11 @@ const renderHeader = () => (
                 }
               </React.Fragment>
             ))}
+            {/* 顯示未歸屬於 Phase 的 Task */}
             {unassignedTasks.length > 0 && (
               <>
                 <tr>
-                  <td colSpan="6" style={{ backgroundColor: "#ccc", fontWeight: "bold" }}>
+                  <td colSpan="7" style={{ backgroundColor: "#ccc", fontWeight: "bold" }}>
                     Unassigned Tasks
                   </td>
                 </tr>
@@ -800,6 +888,14 @@ const renderHeader = () => (
                         <option value="已完成">已完成</option>
                         <option value="自訂">自訂</option>
                       </select>
+                    </td>
+                    <td>
+                      {!isReadOnly && (
+                        <>
+                          {/* 由於此 task 沒有 Phase 父層，排序就直接在 unassigned 群組中處理 */}
+                          {/* 可依照需要新增 moveUnassignedTask 函式 */}
+                        </>
+                      )}
                     </td>
                     <td>
                       <input
