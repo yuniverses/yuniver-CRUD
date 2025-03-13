@@ -19,6 +19,7 @@ const pageSchema = new mongoose.Schema({
   },
   name: { type: String, required: true },
   files: [fileSchema],
+  permissions: { type: String, default: "STAFF_ONLY" } // Add permissions field
 });
 
 module.exports = mongoose.model("Page", pageSchema);

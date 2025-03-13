@@ -42,3 +42,14 @@ export const renamePage = async (pageId, newName, token) => {
   );
   return res.data;
 };
+
+export const updatePagePermissions = async (pageId, permissionData, token) => {
+  const res = await axios.put(
+    `${API_URL}/pages/${pageId}/permissions`,
+    permissionData,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  return res.data;
+};

@@ -1,3 +1,5 @@
+//server/controllers/pageController.js
+
 const Page = require('../models/Page');
 const multer  = require('multer');
 const storage = multer.diskStorage({
@@ -100,5 +102,48 @@ exports.renamePage = async (req, res) => {
   } catch (error) {
     console.error("Rename page error:", error);
     res.status(500).json({ message: 'Failed to rename page' });
+  }
+};
+
+// Update page permissions
+exports.updatePagePermissions = async (req, res) => {
+  try {
+    const { pageId } = req.params;
+    const { permissions } = req.body;
+    const userRole = req.user.role;
+    
+    // Find the page
+    const page = await Page.findById(pageId);
+    
+    if (!page) {
+      return res.status(404).json({ message: 'Page not found' });
+    }
+    
+    // Access control based on user role and requested permission
+    if (userRole === "god") {
+      // God can set any permission
+    } else if (userRole === "admin") {
+      // Admin can't set GOD_ONLY
+      if (permissions === "GOD_ONLY") {
+        return res.status(403).json({ message: "Unauthorized to set this permission level" });
+      }
+    } else if (userRole === "employee") {
+      // Employee can only set STAFF_ONLY and ALL_STAFF_AND_CUSTOMER
+      if (permissions !== "STAFF_ONLY" && permissions !== "ALL_STAFF_AND_CUSTOMER") {
+        return res.status(403).json({ message: "Unauthorized to set this permission level" });
+      }
+    } else {
+      // Other roles can't modify permissions
+      return res.status(403).json({ message: "Unauthorized to modify permissions" });
+    }
+    
+    // Update permissions
+    page.permissions = permissions;
+    await page.save();
+    
+    res.status(200).json(page);
+  } catch (error) {
+    console.error("Update permissions error:", error);
+    res.status(500).json({ message: 'Failed to update page permissions' });
   }
 };

@@ -1,4 +1,3 @@
-// client/src/pages/ProjectDetailsWithFiles.jsx
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ReactQuill from "react-quill";
@@ -7,7 +6,7 @@ import "../css/main.css";
 import ReactDOM from "react-dom";
 
 import { getProjectDetails, addNote, addMessage } from "../api/project";
-import { getPages, createPage, getPageFiles, renamePage, deletePage } from "../api/page";
+import { getPages, createPage, getPageFiles, renamePage, deletePage, updatePagePermissions } from "../api/page";
 import {
   uploadFile,
   downloadFile,
@@ -37,6 +36,22 @@ const quillFormats = [
   "link", "image", "video", "list", "bullet",
 ];
 
+// Define permission presets
+const PERMISSION_PRESETS = {
+  "GOD_ONLY": ["god"],
+  "STAFF_ONLY": ["god", "admin", "employee"],
+  "ALL_STAFF_AND_CUSTOMER": ["god", "admin", "employee", "customer"],
+  "MANAGEMENT_AND_CUSTOMER": ["god", "admin", "customer"]
+};
+
+// Permission labels for display
+const PERMISSION_LABELS = {
+  "GOD_ONLY": "僅系統管理員",
+  "STAFF_ONLY": "僅內部人員",
+  "ALL_STAFF_AND_CUSTOMER": " ",
+  "MANAGEMENT_AND_CUSTOMER": "管理層和客戶"
+};
+
 function ProjectDetailsWithFiles() {
   const { id } = useParams();
   const token = localStorage.getItem("token");
@@ -52,7 +67,9 @@ function ProjectDetailsWithFiles() {
   const [showNotes, setShowNotes] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [docContent, setDocContent] = useState("");
-  const [activeTab, setActiveTab] = useState("files"); // Add tabs for navigation
+  const [activeTab, setActiveTab] = useState("files");
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [selectedPermission, setSelectedPermission] = useState("");
 
   // Get and decode JWT token role information
   const getRole = () => {
@@ -69,12 +86,40 @@ function ProjectDetailsWithFiles() {
     return null;
   };
 
+  const role = getRole();
+
   // Simple permission check function
   const hasAccess = (role, allowedRoles) => {
     return allowedRoles.includes(role);
   };
-
-  const role = getRole();
+  
+  // Function to check if user has permission to view a specific page
+  const hasPageAccess = (page) => {
+    if (!page || !page.permissions) return true; // Default: accessible if no permissions
+    
+    if (typeof page.permissions === 'string') {
+      // When permissions is a string (preset key)
+      return PERMISSION_PRESETS[page.permissions]?.includes(role) || false;
+    } else if (Array.isArray(page.permissions)) {
+      // When permissions is an array of roles
+      return page.permissions.includes(role);
+    }
+    
+    return false;
+  };
+  
+  // Function to determine which permission options are available based on user's role
+  const getAvailablePermissions = () => {
+    if (role === "god") {
+      return Object.keys(PERMISSION_PRESETS);
+    } else if (role === "admin") {
+      return ["STAFF_ONLY", "ALL_STAFF_AND_CUSTOMER", "MANAGEMENT_AND_CUSTOMER"];
+    } else if (role === "employee") {
+      return ["STAFF_ONLY", "ALL_STAFF_AND_CUSTOMER"];
+    }
+    
+    return [];
+  };
 
   useEffect(() => {
     loadProject();
@@ -111,8 +156,12 @@ function ProjectDetailsWithFiles() {
     try {
       const data = await getPages(id, token);
       setPages(data);
+      // Select first accessible page
       if (data.length > 0) {
-        setSelectedPage(data[0]);
+        const accessiblePage = data.find(page => hasPageAccess(page));
+        if (accessiblePage) {
+          setSelectedPage(accessiblePage);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -153,13 +202,58 @@ function ProjectDetailsWithFiles() {
   const handleCreatePage = async () => {
     const pageName = prompt("Enter page name:", "New Page");
     if (!pageName) return;
+    
     try {
-      const newPage = await createPage(id, { name: pageName }, token);
+      // Create page with default permissions based on user role
+      let defaultPermission = "STAFF_ONLY";
+      if (role === "god") {
+        defaultPermission = "GOD_ONLY";
+      }
+      
+      const newPage = await createPage(
+        id, 
+        { 
+          name: pageName,
+          permissions: defaultPermission
+        }, 
+        token
+      );
+      
       setPages((prev) => [...prev, newPage]);
       setSelectedPage(newPage);
     } catch (err) {
       console.error(err);
     }
+  };
+
+  // Handle page permission changes
+  const handleUpdatePagePermissions = async (pageId, permission) => {
+    try {
+      await updatePagePermissions(pageId, { permissions: permission }, token);
+      
+      // Update local state
+      setPages(prevPages => 
+        prevPages.map(page => 
+          page._id === pageId ? { ...page, permissions: permission } : page
+        )
+      );
+      
+      if (selectedPage && selectedPage._id === pageId) {
+        setSelectedPage(prev => ({ ...prev, permissions: permission }));
+      }
+      
+      setShowPermissionsModal(false);
+    } catch (err) {
+      console.error(err);
+      alert("更新頁面權限失敗");
+    }
+  };
+
+  // Open permissions modal for a page
+  const openPermissionsModal = (page) => {
+    setSelectedPage(page);
+    setSelectedPermission(page.permissions || "STAFF_ONLY");
+    setShowPermissionsModal(true);
   };
 
   // Create a text document
@@ -288,6 +382,31 @@ function ProjectDetailsWithFiles() {
     });
   };
 
+  // Get permission label for display
+  const getPermissionLabel = (permission) => {
+    return PERMISSION_LABELS[permission] || "權限設定";
+  };
+  
+  // Check if user can manage this page's permissions
+  const canManagePagePermissions = (page) => {
+    if (!page) return false;
+    
+    // God can manage all permissions
+    if (role === "god") return true;
+    
+    // Admin can manage permissions except GOD_ONLY
+    if (role === "admin") {
+      return page.permissions !== "GOD_ONLY";
+    }
+    
+    // Employee can only manage STAFF_ONLY and ALL_STAFF_AND_CUSTOMER
+    if (role === "employee") {
+      return page.permissions === "STAFF_ONLY" || page.permissions === "ALL_STAFF_AND_CUSTOMER";
+    }
+    
+    return false;
+  };
+
   if (!project)
     return (
       <div className="loading-container">
@@ -369,19 +488,33 @@ function ProjectDetailsWithFiles() {
           <div className="pages-section">
             <h3 className="section-title">Pages</h3>
             <ul className="page-list">
-              {pages.map((page) => (
+              {pages.filter(page => hasPageAccess(page)).map((page) => (
                 <li 
                   key={page._id || page.id} 
                   className={`page-item ${selectedPage && (selectedPage._id || selectedPage.id) === (page._id || page.id) ? 'active' : ''}`}
                 >
-                  <span 
-                    className="page-name" 
-                    onClick={() => setSelectedPage(page)}
-                  >
-                    {page.name}
-                  </span>
+                  <div className="page-header">
+                    <span 
+                      className="page-name" 
+                      onClick={() => setSelectedPage(page)}
+                    >
+                      {page.name}
+                    </span>
+                    <span className="page-permission-tag">
+                      {getPermissionLabel(page.permissions)}
+                    </span>
+                  </div>
+                  
                   {hasAccess(role, ["god", "admin", "employee"]) && (
                     <div className="page-actions">
+                      {canManagePagePermissions(page) && (
+                        <button
+                          className="action-btn permission-btn"
+                          onClick={() => openPermissionsModal(page)}
+                        >
+                          權限設定
+                        </button>
+                      )}
                       <button
                         className="action-btn rename-btn"
                         onClick={async () => {
@@ -407,7 +540,8 @@ function ProjectDetailsWithFiles() {
                               await deletePage(page._id || page.id, token);
                               setPages(pages.filter(p => (p._id || p.id) !== (page._id || page.id)));
                               if (selectedPage && (selectedPage._id || selectedPage.id) === (page._id || page.id)) {
-                                setSelectedPage(pages[0] || null);
+                                const accessiblePages = pages.filter(p => hasPageAccess(p) && (p._id || p.id) !== (page._id || page.id));
+                                setSelectedPage(accessiblePages[0] || null);
                               }
                               loadPages();
                             } catch (err) {
@@ -706,6 +840,55 @@ function ProjectDetailsWithFiles() {
           )}
         </div>
       </div>
+
+      {/* Permissions Modal */}
+      {showPermissionsModal && selectedPage && (
+        <div className="modal-overlay">
+          <div className="permissions-modal">
+            <h3 className="modal-title">設定頁面權限</h3>
+            <p className="page-name">{selectedPage.name}</p>
+            
+            <div className="permission-options">
+              {getAvailablePermissions().map(permission => (
+                <div className="permission-option" key={permission}>
+                  <input
+                    type="radio"
+                    id={permission}
+                    name="pagePermission"
+                    value={permission}
+                    checked={selectedPermission === permission}
+                    onChange={() => setSelectedPermission(permission)}
+                  />
+                  <label htmlFor={permission}>
+                    {getPermissionLabel(permission)}
+                    <span className="permission-description">
+                      {permission === "GOD_ONLY" && "（僅系統管理員可查看）"}
+                      {permission === "STAFF_ONLY" && "（僅內部員工可查看）"}
+                      {permission === "ALL_STAFF_AND_CUSTOMER" && "（所有人員和客戶可查看）"}
+                      {permission === "MANAGEMENT_AND_CUSTOMER" && "（管理層和客戶可查看）"}
+                    </span>
+                  </label>
+                </div>
+              ))}
+            </div>
+            
+            <div className="modal-actions">
+              <button 
+                className="modal-btn cancel-btn"
+                onClick={() => setShowPermissionsModal(false)}
+              >
+                取消
+              </button>
+              <button 
+                className="modal-btn save-btn"
+                onClick={() => handleUpdatePagePermissions(selectedPage._id, selectedPermission)}
+              >
+                保存設定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -53,7 +53,7 @@ npm start  # 或使用 nodemon index.js
 ```bash
 cd client
 npm install
-npm start
+node index.js
 ```
 
 前端將運行於 `http://localhost:3000`
