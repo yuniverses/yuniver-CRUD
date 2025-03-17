@@ -202,7 +202,8 @@ function ProjectDetailsWithFiles() {
     if (
       selectedFile &&
       (selectedFile.mimetype === "text/plain" ||
-        selectedFile.mimetype === "text/html")
+        selectedFile.mimetype === "text/html") && 
+      !selectedFile.isExternalLink
     ) {
       setDocContent(selectedFile.content || "");
     }
@@ -373,12 +374,17 @@ function ProjectDetailsWithFiles() {
         url = 'https://' + url;
       }
       
-      const response = await addExternalLink(selectedPage._id, {
-        name: linkData.name,
+      // 使用修正後的URL更新linkData
+      const updatedLinkData = {
+        ...linkData,
         url: url,
-        description: linkData.description,
         isExternalLink: true
-      }, token);
+      };
+      
+      console.log("添加外部連結:", updatedLinkData);
+      
+      const response = await addExternalLink(selectedPage._id, updatedLinkData, token);
+      console.log("服務器響應:", response);
       
       // 重新獲取檔案列表
       const updatedFiles = await getPageFiles(selectedPage._id, token);
@@ -391,7 +397,7 @@ function ProjectDetailsWithFiles() {
       alert("連結新增成功");
     } catch (error) {
       console.error("Error adding link:", error);
-      alert("連結新增失敗");
+      alert("連結新增失敗: " + (error.response?.data?.message || error.message));
     }
   };
 
@@ -884,7 +890,13 @@ function ProjectDetailsWithFiles() {
                   >
                     <div 
                       className="file-name"
-                      onClick={() => setSelectedFile(file)}
+                      onClick={() => {
+                        if (file.isExternalLink && file.url) {
+                          window.open(file.url, '_blank', 'noopener,noreferrer');
+                        } else {
+                          setSelectedFile(file);
+                        }
+                      }}
                     >
                       {file.isExternalLink ? (
                         <span className="link-icon">🔗</span>
@@ -980,20 +992,23 @@ function ProjectDetailsWithFiles() {
                     {selectedFile.description && (
                       <div className="link-description">{selectedFile.description}</div>
                     )}
-                    <a 
-                      href={selectedFile.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="link-url"
+                    <button 
+                      className="open-link-btn"
+                      onClick={() => window.open(selectedFile.url, '_blank', 'noopener,noreferrer')}
                     >
-                      {selectedFile.url}
-                    </a>
+                      在新視窗中開啟
+                    </button>
                   </div>
-                  <iframe
-                    src={selectedFile.url}
-                    title={selectedFile.originalname || selectedFile.filename}
-                    className="website-frame"
-                  />
+                  <div className="iframe-container">
+                    <iframe
+                      src={selectedFile.url}
+                      title={selectedFile.originalname || selectedFile.filename}
+                      className="website-frame"
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                      onLoad={(e) => console.log("iframe loaded", e)}
+                      onError={(e) => console.error("iframe error", e)}
+                    />
+                  </div>
                 </div>
               ) : selectedFile.mimetype === "application/pdf" ? (
                 <div className="pdf-preview">
