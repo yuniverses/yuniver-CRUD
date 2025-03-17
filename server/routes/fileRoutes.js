@@ -193,6 +193,7 @@ router.post("/link", auth, async (req, res) => {
       url: url,
       description: description || "",
       isExternalLink: true,
+      mimetype: "text/html", // 添加必要的mimetype欄位
       uploadedAt: new Date()
     };
     
