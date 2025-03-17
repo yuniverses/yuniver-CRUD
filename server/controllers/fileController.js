@@ -1,6 +1,7 @@
 // controllers/fileController.js
 const File = require('../models/File');
 const path = require('path');
+const fs = require('fs');
 
 // 若採用本地上傳，使用 Multer 做檔案處理
 exports.uploadFile = async (req, res) => {
@@ -68,5 +69,56 @@ exports.renameFile = async (req, res) => {
     res.json({ message: "檔案重新命名成功", file: updatedFile });
   } catch (err) {
     res.status(500).json({ message: "檔案重新命名失敗", error: err.message });
+  }
+};
+
+// 新增外部連結
+exports.addLink = async (req, res) => {
+  try {
+    const { pageId, name, url, description, isExternalLink } = req.body;
+    
+    // 建立新的檔案記錄，但設定為外部連結
+    const newLink = new File({
+      projectId: pageId,
+      fileName: name,
+      url: url,
+      description: description || "",
+      isExternalLink: true,
+      uploadedAt: new Date()
+    });
+    
+    await newLink.save();
+    
+    res.status(201).json(newLink);
+  } catch (error) {
+    console.error('Error adding external link:', error);
+    res.status(500).json({ message: "Error adding external link", error: error.message });
+  }
+};
+
+// 更新外部連結
+exports.updateLink = async (req, res) => {
+  try {
+    const { linkId } = req.params;
+    const { name, url, description } = req.body;
+    
+    const updatedLink = await File.findByIdAndUpdate(
+      linkId,
+      { 
+        fileName: name, 
+        url: url, 
+        description: description 
+      },
+      { new: true }
+    );
+    
+    if (!updatedLink) {
+      return res.status(404).json({ message: "Link not found" });
+    }
+    
+    res.status(200).json(updatedLink);
+  } catch (error) {
+    console.error('Error updating external link:', error);
+    res.status(500).json({ message: "Error updating external link", error: error.message });
   }
 };

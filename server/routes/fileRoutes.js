@@ -176,4 +176,60 @@ router.put("/document/:fileId", auth, async (req, res) => {
   }
 });
 
+// 新增外部連結：POST /api/files/link
+router.post("/link", auth, async (req, res) => {
+  try {
+    const { pageId, name, url, description } = req.body;
+    if (!pageId || !name || !url) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+    
+    const page = await Page.findById(pageId);
+    if (!page) return res.status(404).json({ message: "Page not found" });
+    
+    const linkData = {
+      filename: name,
+      originalname: name,
+      url: url,
+      description: description || "",
+      isExternalLink: true,
+      uploadedAt: new Date()
+    };
+    
+    page.files.push(linkData);
+    await page.save();
+    
+    // 回傳剛建立的連結，Mongoose 會自動產生 _id
+    res.status(201).json(page.files[page.files.length - 1]);
+  } catch (error) {
+    console.error("Create external link error:", error);
+    res.status(500).json({ message: "Failed to create external link" });
+  }
+});
+
+// 更新外部連結：PUT /api/files/link/:linkId
+router.put("/link/:linkId", auth, async (req, res) => {
+  try {
+    const { linkId } = req.params;
+    const { name, url, description } = req.body;
+    
+    const page = await Page.findOne({ "files._id": linkId });
+    if (!page) return res.status(404).json({ message: "Link not found" });
+    
+    const link = page.files.id(linkId);
+    if (!link) return res.status(404).json({ message: "Link not found" });
+    
+    if (name) link.originalname = name;
+    if (name) link.filename = name;
+    if (url) link.url = url;
+    if (description !== undefined) link.description = description;
+    
+    await page.save();
+    res.json(link);
+  } catch (error) {
+    console.error("Update external link error:", error);
+    res.status(500).json({ message: "Failed to update external link" });
+  }
+});
+
 module.exports = router;

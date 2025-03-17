@@ -15,6 +15,8 @@ import {
   renameFile,
   createDocument,
   updateDocument,
+  addExternalLink,
+  updateExternalLink,
 } from "../api/file";
 if (!ReactDOM.findDOMNode) {
   ReactDOM.findDOMNode = (element) => element;
@@ -65,6 +67,8 @@ function ProjectDetailsWithFiles() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [noteContent, setNoteContent] = useState("");
   const [messageContent, setMessageContent] = useState("");
+  const [showAddLinkModal, setShowAddLinkModal] = useState(false);
+  const [linkData, setLinkData] = useState({ url: "", name: "", description: "" });
   const [showCommunicationModal, setShowCommunicationModal] = useState(false);
   const [communicationTab, setCommunicationTab] = useState('messages'); // 'messages' or 'notes'
   const [showStickyNotes, setShowStickyNotes] = useState(false);
@@ -351,6 +355,43 @@ function ProjectDetailsWithFiles() {
     } catch (err) {
       console.error(err);
       alert("Document update failed");
+    }
+  };
+  
+  // 處理新增外部連結
+  const handleAddExternalLink = async () => {
+    if (!selectedPage) return;
+    if (!linkData.url || !linkData.name) {
+      alert('請填寫連結網址和名稱');
+      return;
+    }
+    
+    try {
+      // 確保URL以http://或https://開頭
+      let url = linkData.url;
+      if (!/^https?:\/\//.test(url)) {
+        url = 'https://' + url;
+      }
+      
+      const response = await addExternalLink(selectedPage._id, {
+        name: linkData.name,
+        url: url,
+        description: linkData.description,
+        isExternalLink: true
+      }, token);
+      
+      // 重新獲取檔案列表
+      const updatedFiles = await getPageFiles(selectedPage._id, token);
+      setFiles(updatedFiles);
+      
+      // 清空表單並關閉彈窗
+      setLinkData({ url: "", name: "", description: "" });
+      setShowAddLinkModal(false);
+      
+      alert("連結新增成功");
+    } catch (error) {
+      console.error("Error adding link:", error);
+      alert("連結新增失敗");
     }
   };
 
@@ -837,7 +878,7 @@ function ProjectDetailsWithFiles() {
                 {files.map((file) => (
                   <li
                     key={file._id || file.filename}
-                    className={`file-item ${selectedFile && selectedFile._id === file._id ? 'active' : ''}`}
+                    className={`file-item ${selectedFile && selectedFile._id === file._id ? 'active' : ''} ${file.isExternalLink ? 'external-link-item' : ''}`}
                     onMouseEnter={() => handleMouseEnter(file._id)}
                     onMouseLeave={() => handleMouseLeave(file._id)}
                   >
@@ -845,7 +886,10 @@ function ProjectDetailsWithFiles() {
                       className="file-name"
                       onClick={() => setSelectedFile(file)}
                     >
-                      {file.originalname || file.filename}
+                      {file.isExternalLink ? (
+                        <span className="link-icon">🔗</span>
+                      ) : null}
+                      {file.originalname || file.filename || file.name}
                     </div>
                     {file.isHovered && (
                       <div className="file-actions">
@@ -886,6 +930,12 @@ function ProjectDetailsWithFiles() {
                   >
                     新增文檔
                   </button>
+                  <button
+                    className="create-link-btn"
+                    onClick={() => setShowAddLinkModal(true)}
+                  >
+                    新增連結
+                  </button>
                 </div>
               )}
             </div>
@@ -923,6 +973,27 @@ function ProjectDetailsWithFiles() {
                       儲存變更
                     </button>
                   </div>
+                </div>
+              ) : selectedFile.isExternalLink ? (
+                <div className="external-link-preview">
+                  <div className="link-info">
+                    {selectedFile.description && (
+                      <div className="link-description">{selectedFile.description}</div>
+                    )}
+                    <a 
+                      href={selectedFile.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="link-url"
+                    >
+                      {selectedFile.url}
+                    </a>
+                  </div>
+                  <iframe
+                    src={selectedFile.url}
+                    title={selectedFile.originalname || selectedFile.filename}
+                    className="website-frame"
+                  />
                 </div>
               ) : selectedFile.mimetype === "application/pdf" ? (
                 <div className="pdf-preview">
@@ -1297,6 +1368,68 @@ function ProjectDetailsWithFiles() {
                 }}
                 title="專案流程圖"
               />
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 外部連結彈窗 */}
+      {showAddLinkModal && (
+        <div className="modal-overlay">
+          <div className="external-link-modal">
+            <h3 className="modal-title">新增外部連結</h3>
+            
+            <div className="link-form">
+              <div className="form-group">
+                <label htmlFor="linkName">連結名稱:</label>
+                <input 
+                  type="text" 
+                  id="linkName" 
+                  value={linkData.name} 
+                  onChange={(e) => setLinkData({...linkData, name: e.target.value})}
+                  placeholder="請輸入連結名稱"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="linkUrl">URL:</label>
+                <input 
+                  type="text" 
+                  id="linkUrl" 
+                  value={linkData.url} 
+                  onChange={(e) => setLinkData({...linkData, url: e.target.value})}
+                  placeholder="https://example.com"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="linkDescription">描述:</label>
+                <textarea 
+                  id="linkDescription" 
+                  value={linkData.description} 
+                  onChange={(e) => setLinkData({...linkData, description: e.target.value})}
+                  placeholder="描述此連結的用途（選填）"
+                />
+              </div>
+            </div>
+            
+            <div className="modal-actions">
+              <button 
+                className="modal-btn cancel-btn"
+                onClick={() => {
+                  setShowAddLinkModal(false);
+                  setLinkData({ url: "", name: "", description: "" });
+                }}
+              >
+                取消
+              </button>
+              <button 
+                className="modal-btn save-btn"
+                onClick={handleAddExternalLink}
+                disabled={!linkData.url || !linkData.name}
+              >
+                新增連結
+              </button>
             </div>
           </div>
         </div>

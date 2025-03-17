@@ -9,6 +9,9 @@ const fileSchema = new mongoose.Schema({
   size: Number,
   uploadedAt: { type: Date, default: Date.now },
   content: { type: String }, // 文字檔內容，若非文字檔可為 undefined
+  isExternalLink: { type: Boolean, default: false }, // 標記是否為外部連結
+  url: { type: String }, // 外部連結的URL
+  description: { type: String } // 外部連結的描述
 });
 
 const pageSchema = new mongoose.Schema({
