@@ -7,4 +7,4 @@ client/node_modules/
 
 # 忽略環境變數檔案
 server/.env
-.env
+client/.env
