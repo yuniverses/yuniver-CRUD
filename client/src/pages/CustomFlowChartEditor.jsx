@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 import "../css/main.css";
+import "../css/custom-communication.css";
 // 預設尺寸與手把大小
 const NODE_WIDTH_DEFAULT = 140;
 const NODE_HEIGHT_DEFAULT = 80;
@@ -628,21 +629,36 @@ useEffect(() => {
 
   // Header 區塊，根據唯讀模式隱藏編輯相關按鈕
 const renderHeader = () => (
-  <div style={{ marginBottom: "10px" }}>
-    
+  <div className="flowchart-controls">
     {!isReadOnly && (
       <>
-      <button onClick={() => setDisplayMode("flowchart")}>Flowchart View</button>
-      <button onClick={() => setDisplayMode("list")} style={{ marginLeft: "10px" }}>List View</button>
-        <button onClick={() => handleAddNewNode("task")} style={{ marginLeft: "10px" }}>Add Task</button>
-        <button onClick={() => handleAddNewNode("phase")} style={{ marginLeft: "10px" }}>Add Phase</button>
-        <button onClick={() => handleAddNewNode("arrow")} style={{ marginLeft: "10px" }}>Add Arrow</button>
-        <button onClick={handleSave} style={{ marginLeft: "10px" }}>Save Flow Chart</button>
-        <button onClick={handleDownloadFlowchart} style={{ marginLeft: "10px" }}>Download Flowchart</button>
-        <label style={{ marginLeft: "10px" }}>
-          Import Flowchart:
-          <input type="file" accept=".json" onChange={handleUploadFlowchart} style={{ marginLeft: "5px" }} />
-        </label>
+        <button onClick={() => setDisplayMode("flowchart")} className={`yuniver-btn ${displayMode === "flowchart" ? "" : "secondary"} yuniver-filter-btn`}>
+          Flowchart View
+        </button>
+        <button onClick={() => setDisplayMode("list")} className={`yuniver-btn ${displayMode === "list" ? "" : "secondary"} yuniver-filter-btn`}>
+          List View
+        </button>
+        <button onClick={() => handleAddNewNode("task")} className="yuniver-btn secondary yuniver-filter-btn">
+          Add Task
+        </button>
+        <button onClick={() => handleAddNewNode("phase")} className="yuniver-btn secondary yuniver-filter-btn">
+          Add Phase
+        </button>
+        <button onClick={() => handleAddNewNode("arrow")} className="yuniver-btn secondary yuniver-filter-btn">
+          Add Arrow
+        </button>
+        <button onClick={handleSave} className="yuniver-btn yuniver-filter-btn">
+          Save Flow Chart
+        </button>
+        <button onClick={handleDownloadFlowchart} className="yuniver-btn secondary yuniver-filter-btn">
+          Download Flowchart
+        </button>
+        <div className="flowchart-import">
+          <label className="yuniver-btn secondary">
+            Import Flowchart
+            <input type="file" accept=".json" onChange={handleUploadFlowchart} style={{ display: "none" }} />
+          </label>
+        </div>
       </>
     )}
   </div>
@@ -919,11 +935,12 @@ const moveTask = (taskId, phaseId, direction) => {
   const renderFlowchartView = () => (
     <div
       ref={containerRef}
+      className="yuniver-flowchart-view"
       style={{
         position: "relative",
         width: "100%",
         height: "600px",
-        border: "1px solid #ccc",
+        border: "1px solid #e0e0e0",
         backgroundColor: "#fafafa"
       }}
       onMouseMove={handleMouseMove}
@@ -1058,86 +1075,115 @@ const moveTask = (taskId, phaseId, direction) => {
   );
 
   return (
-    <div>
-      <h2>Custom Flow Chart Editor {isTemplateMode ? "(Template Mode)" : ""}</h2>
-      {renderHeader()}
-      {displayMode === "flowchart" ? renderFlowchartView() : renderListView()}
-      {!isReadOnly && selectedNode && (
-        <div style={{ marginTop: "20px", border: "1px solid #ccc", padding: "10px" }}>
-          <h3>Edit Node Properties</h3>
-          <div>
-            <label>Type:</label>
-            <select name="type" value={selectedNode.type} onChange={handleEditChange}>
-              <option value="phase">phase</option>
-              <option value="task">task</option>
-              <option value="subFlow">subFlow</option>
-              <option value="iterative">iterative</option>
-              <option value="note">note</option>
-              <option value="extra">extra</option>
-            </select>
+    <div className="yuniver-container">
+      <header className="yuniver-header">
+        <div className="yuniver-logo">
+          <h1>YUNIVER <span className="registered-mark">®</span></h1>
+          <p className="subtitle">流程圖編輯器</p>
+        </div>
+      </header>
+
+      <div className="yuniver-content">
+        <div className="main-content">
+          <h2 className="page-title">Custom Flow Chart Editor {isTemplateMode ? "(Template Mode)" : ""}</h2>
+          
+          <div className="yuniver-flowchart-container">
+            <div className="yuniver-flowchart-header">
+              {renderHeader()}
+            </div>
+            
+            <div className="yuniver-flowchart-content">
+              {displayMode === "flowchart" ? renderFlowchartView() : renderListView()}
+            </div>
           </div>
-          <div>
-            <label>Label:</label>
-            <input name="label" value={selectedNode.label} onChange={handleEditChange} />
-          </div>
-          <div>
-            <label>Description:</label>
-            <textarea name="description" value={selectedNode.description} onChange={handleEditChange} />
-          </div>
-          <div>
-            <label>Link:</label>
-            <input name="link" value={selectedNode.link} onChange={handleEditChange} />
-          </div>
-          {(selectedNode.type === "phase" || selectedNode.type === "task") && (
-            <div>
-              <label>Status:</label>
-              <select name="status" value={selectedNode.status} onChange={handleEditChange}>
-                <option value="未開始">未開始</option>
-                <option value="規劃中">規劃中</option>
-                <option value="進行中">進行中</option>
-                <option value="已完成">已完成</option>
-                <option value="自訂">自訂</option>
-              </select>
-              {selectedNode.status === "自訂" && (
-                <div>
-                  <label>Custom Status:</label>
-                  <input name="customStatus" value={selectedNode.customStatus || ""} onChange={handleEditChange} />
+          
+          {!isReadOnly && selectedNode && (
+            <div className="yuniver-flowchart-container">
+              <div className="yuniver-flowchart-header">
+                <h3 className="yuniver-flowchart-title">Edit Node Properties</h3>
+              </div>
+              
+              <div className="yuniver-flowchart-content">
+                <div className="yuniver-node yuniver-node-properties">
+                  <div>
+                    <label>Type:</label>
+                    <select name="type" value={selectedNode.type} onChange={handleEditChange} className="form-control">
+                      <option value="phase">phase</option>
+                      <option value="task">task</option>
+                      <option value="subFlow">subFlow</option>
+                      <option value="iterative">iterative</option>
+                      <option value="note">note</option>
+                      <option value="extra">extra</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>Label:</label>
+                    <input name="label" value={selectedNode.label} onChange={handleEditChange} className="form-control" />
+                  </div>
+                  <div>
+                    <label>Description:</label>
+                    <textarea name="description" value={selectedNode.description} onChange={handleEditChange} className="form-control" />
+                  </div>
+                  <div>
+                    <label>Link:</label>
+                    <input name="link" value={selectedNode.link} onChange={handleEditChange} className="form-control" />
+                  </div>
+                  {(selectedNode.type === "phase" || selectedNode.type === "task") && (
+                    <div>
+                      <label>Status:</label>
+                      <select name="status" value={selectedNode.status} onChange={handleEditChange} className="form-control">
+                        <option value="未開始">未開始</option>
+                        <option value="規劃中">規劃中</option>
+                        <option value="進行中">進行中</option>
+                        <option value="已完成">已完成</option>
+                        <option value="自訂">自訂</option>
+                      </select>
+                      {selectedNode.status === "自訂" && (
+                        <div>
+                          <label>Custom Status:</label>
+                          <input name="customStatus" value={selectedNode.customStatus || ""} onChange={handleEditChange} className="form-control" />
+                        </div>
+                      )}
+                      <div>
+                        <label>Shape:</label>
+                        <select name="shape" value={selectedNode.shape} onChange={handleEditChange} className="form-control">
+                          <option value="rectangle">矩形</option>
+                          <option value="ellipse">橢圓 / 藥丸</option>
+                          <option value="parallelogram">平行四邊形</option>
+                          <option value="diamond">菱形</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <label>Children (comma-separated IDs):</label>
+                    <input
+                      value={(selectedNode.children || []).join(",")}
+                      onChange={handleChildrenChange}
+                      className="form-control"
+                    />
+                  </div>
+                  <div>
+                    <label>Extras (comma-separated):</label>
+                    <input
+                      name="extras"
+                      value={(selectedNode.extras || []).join(",")}
+                      onChange={(e) => {
+                        const arr = e.target.value.split(",").map(s => s.trim()).filter(s => s);
+                        handleEditChange({ target: { name: "extras", value: arr } });
+                      }}
+                      className="form-control"
+                    />
+                  </div>
+                  <div style={{ marginTop: "10px" }}>
+                    <button onClick={handleDeleteNode} className="yuniver-btn danger">Delete Node</button>
+                  </div>
                 </div>
-              )}
-              <div>
-                <label>Shape:</label>
-                <select name="shape" value={selectedNode.shape} onChange={handleEditChange}>
-                  <option value="rectangle">矩形</option>
-                  <option value="ellipse">橢圓 / 藥丸</option>
-                  <option value="parallelogram">平行四邊形</option>
-                  <option value="diamond">菱形</option>
-                </select>
               </div>
             </div>
           )}
-          <div>
-            <label>Children (comma-separated IDs):</label>
-            <input
-              value={(selectedNode.children || []).join(",")}
-              onChange={handleChildrenChange}
-            />
-          </div>
-          <div>
-            <label>Extras (comma-separated):</label>
-            <input
-              name="extras"
-              value={(selectedNode.extras || []).join(",")}
-              onChange={(e) => {
-                const arr = e.target.value.split(",").map(s => s.trim()).filter(s => s);
-                handleEditChange({ target: { name: "extras", value: arr } });
-              }}
-            />
-          </div>
-          <div style={{ marginTop: "10px" }}>
-            <button onClick={handleDeleteNode}>Delete Node</button>
-          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

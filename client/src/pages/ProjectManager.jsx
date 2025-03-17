@@ -116,7 +116,7 @@ function ProjectManager() {
 
   return (
     <div style={{ padding: "20px" }}>
-      <h2>專案管理 (CRUD + 下拉選單指派負責人)</h2>
+      <h2>專案編輯與設定 (CRUD + 下拉選單指派負責人)</h2>
 
       {/* 專案清單 */}
       <table border="1" cellPadding="8" style={{ marginTop: "20px" }}>

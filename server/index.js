@@ -12,10 +12,15 @@ const userRoutes = require("./routes/userRoutes"); // 新增這行
 const templateRoutes = require("./routes/templateRoutes");
 const pageRoutes = require("./routes/pageRoutes");
 
+// 初始化Discord機器人
+const discordBot = require("./utils/discordBot");
+
 const app = express();
 
 // 連線 MongoDB
 connectDB();
+// 啟動Discord機器人
+discordBot.initBot();
 
 app.use(cors());
 app.use(express.json());

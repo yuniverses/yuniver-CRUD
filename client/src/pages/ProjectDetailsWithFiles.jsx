@@ -3,9 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import "../css/main.css";
+import "../css/custom-communication.css";
 import ReactDOM from "react-dom";
 
-import { getProjectDetails, addNote, addMessage } from "../api/project";
+import { getProjectDetails, addNote, deleteNote, addMessage } from "../api/project";
 import { getPages, createPage, getPageFiles, renamePage, deletePage, updatePagePermissions } from "../api/page";
 import {
   uploadFile,
@@ -64,12 +65,16 @@ function ProjectDetailsWithFiles() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [noteContent, setNoteContent] = useState("");
   const [messageContent, setMessageContent] = useState("");
-  const [showNotes, setShowNotes] = useState(false);
-  const [showMessages, setShowMessages] = useState(false);
+  const [showCommunicationModal, setShowCommunicationModal] = useState(false);
+  const [communicationTab, setCommunicationTab] = useState('messages'); // 'messages' or 'notes'
+  const [showStickyNotes, setShowStickyNotes] = useState(false);
+  const [stickyNotes, setStickyNotes] = useState([]);
+  const [selectedNoteColor, setSelectedNoteColor] = useState('yellow'); // 'yellow', 'green', 'blue', 'pink'
   const [docContent, setDocContent] = useState("");
   const [activeTab, setActiveTab] = useState("files");
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [selectedPermission, setSelectedPermission] = useState("");
+  const [showFlowchartModal, setShowFlowchartModal] = useState(false);
 
   // Get and decode JWT token role information
   const getRole = () => {
@@ -350,24 +355,42 @@ function ProjectDetailsWithFiles() {
   };
 
   const handleAddNote = async () => {
+    if (!noteContent.trim()) return;
+    
     try {
       await addNote(id, noteContent, token);
-      alert("Note added");
+      
+      // 建立一個新的便利貼
+      const newNote = {
+        id: Date.now().toString(), // 臨時ID，會在重新加載時更新為實際ID
+        content: noteContent,
+        createdAt: new Date().toISOString(),
+        x: 100 + (stickyNotes.length % 3) * 220,
+        y: 100 + Math.floor(stickyNotes.length / 3) * 170,
+        color: selectedNoteColor,
+        rotate: Math.random() * 6 - 3 + 'deg' // -3 to +3 degrees
+      };
+      
+      setStickyNotes([...stickyNotes, newNote]);
       setNoteContent("");
+      setShowStickyNotes(true);
       loadProject();
     } catch (err) {
       console.error(err);
+      alert("新增備註失敗");
     }
   };
 
   const handleAddMessage = async () => {
+    if (!messageContent.trim()) return;
+    
     try {
       await addMessage(id, messageContent, token);
-      alert("Message added");
       setMessageContent("");
       loadProject();
     } catch (err) {
       console.error(err);
+      alert("發送訊息失敗");
     }
   };
 
@@ -381,6 +404,210 @@ function ProjectDetailsWithFiles() {
       day: "2-digit"
     });
   };
+  
+  // Format datetime for display
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleString("zh-TW", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+  
+  // 便利貼拖曳功能實現
+  const [draggedNote, setDraggedNote] = useState(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  
+  const handleStickyNoteMouseDown = (e, noteId) => {
+    if (e.target.classList.contains('action-btn')) return;
+    
+    const note = stickyNotes.find(n => n.id === noteId);
+    if (!note) return;
+    
+    const noteElement = e.currentTarget;
+    const rect = noteElement.getBoundingClientRect();
+    
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+    
+    setDraggedNote(noteId);
+    e.preventDefault();
+  };
+  
+  const handleStickyNoteMouseMove = (e) => {
+    if (!draggedNote) return;
+    
+    const newX = e.clientX - dragOffset.x;
+    const newY = e.clientY - dragOffset.y;
+    
+    setStickyNotes(notes => notes.map(note => 
+      note.id === draggedNote ? { ...note, x: newX, y: newY } : note
+    ));
+  };
+  
+  const handleStickyNoteMouseUp = () => {
+    setDraggedNote(null);
+  };
+  
+  useEffect(() => {
+    if (draggedNote) {
+      document.addEventListener('mousemove', handleStickyNoteMouseMove);
+      document.addEventListener('mouseup', handleStickyNoteMouseUp);
+    } else {
+      document.removeEventListener('mousemove', handleStickyNoteMouseMove);
+      document.removeEventListener('mouseup', handleStickyNoteMouseUp);
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleStickyNoteMouseMove);
+      document.removeEventListener('mouseup', handleStickyNoteMouseUp);
+    };
+  }, [draggedNote]);
+  
+  // 當項目加載時，初始化便利貼並檢查是否顯示
+  useEffect(() => {
+    if (project && project.notes) {
+      // 嘗試從localStorage中讀取便利貼位置和顯示狀態
+      const savedNotesPositions = localStorage.getItem(`project-${id}-notes-positions`);
+      const savedShowStickyNotes = localStorage.getItem(`project-${id}-show-sticky-notes`);
+      
+      // 如果之前保存過便利貼顯示狀態，則使用保存的狀態
+      if (savedShowStickyNotes !== null) {
+        setShowStickyNotes(savedShowStickyNotes === 'true');
+      }
+      
+      // 如果之前保存過便利貼位置，則使用保存的位置
+      if (savedNotesPositions) {
+        try {
+          const savedPositions = JSON.parse(savedNotesPositions);
+          
+          // 將保存的位置與當前便利貼合併
+          const initialNotes = project.notes.map((note) => {
+            const savedPosition = savedPositions.find(pos => pos.id === note._id);
+            
+            if (savedPosition) {
+              return {
+                id: note._id,
+                content: note.content,
+                createdAt: note.createdAt,
+                x: savedPosition.x,
+                y: savedPosition.y,
+                color: savedPosition.color || 'yellow',
+                rotate: savedPosition.rotate || `${Math.random() * 6 - 3}deg`
+              };
+            } else {
+              // 對於新便利貼，隨機位置和顏色
+              const index = Math.floor(Math.random() * 10);
+              return {
+                id: note._id,
+                content: note.content,
+                createdAt: note.createdAt,
+                x: 100 + (index % 3) * 220,
+                y: 100 + Math.floor(index / 3) * 170,
+                color: ['yellow', 'green', 'blue', 'pink'][index % 4],
+                rotate: `${Math.random() * 6 - 3}deg` // -3 to +3 degrees
+              };
+            }
+          });
+          
+          setStickyNotes(initialNotes);
+        } catch (e) {
+          console.error('Error parsing saved notes positions:', e);
+          // 如果解析失敗，使用默認位置
+          initializeDefaultStickyNotes(project.notes);
+        }
+      } else {
+        // 如果沒有保存過位置，則使用默認位置
+        initializeDefaultStickyNotes(project.notes);
+      }
+    }
+  }, [project, id]);
+  
+  // 初始化默認便利貼位置的輔助函數
+  const initializeDefaultStickyNotes = (notes) => {
+    const initialNotes = notes.map((note, index) => ({
+      id: note._id,
+      content: note.content,
+      createdAt: note.createdAt,
+      x: 100 + (index % 3) * 220,
+      y: 100 + Math.floor(index / 3) * 170,
+      color: ['yellow', 'green', 'blue', 'pink'][index % 4],
+      rotate: `${Math.random() * 6 - 3}deg` // -3 to +3 degrees
+    }));
+    setStickyNotes(initialNotes);
+  };
+  
+  // 保存便利貼位置到localStorage
+  useEffect(() => {
+    if (stickyNotes.length > 0) {
+      // 只保存必要的位置信息
+      const positionsToSave = stickyNotes.map(note => ({
+        id: note.id,
+        x: note.x,
+        y: note.y,
+        color: note.color,
+        rotate: note.rotate
+      }));
+      
+      localStorage.setItem(`project-${id}-notes-positions`, JSON.stringify(positionsToSave));
+    }
+  }, [stickyNotes, id]);
+  
+  // 刪除訊息和備註功能
+  const handleDeleteMessage = async (messageId) => {
+    if (!window.confirm('確定要刪除此訊息？')) return;
+    
+    try {
+      // 刪除訊息的API調用將在更新控制器端點後實現
+      // await deleteMessage(id, messageId, token);
+      // 暫時使用前端過濾的方式更新UI
+      const updatedMessages = project.messages.filter(msg => msg._id !== messageId);
+      setProject({...project, messages: updatedMessages});
+    } catch (err) {
+      console.error(err);
+      alert('刪除訊息失敗');
+    }
+  };
+  
+  const handleDeleteNote = async (noteId) => {
+    if (!window.confirm('確定要刪除此備註？')) return;
+    
+    try {
+      // 調用API刪除備註
+      await deleteNote(id, noteId, token);
+      
+      // 更新前端UI
+      const updatedNotes = project.notes.filter(note => note._id !== noteId);
+      setProject({...project, notes: updatedNotes});
+      
+      // 同時從便利貼中移除
+      setStickyNotes(stickyNotes.filter(note => note.id !== noteId));
+      
+      // 從localStorage中刪除便利貼位置
+      const savedNotesPositions = localStorage.getItem(`project-${id}-notes-positions`);
+      if (savedNotesPositions) {
+        try {
+          const positions = JSON.parse(savedNotesPositions);
+          const updatedPositions = positions.filter(pos => pos.id !== noteId);
+          localStorage.setItem(`project-${id}-notes-positions`, JSON.stringify(updatedPositions));
+        } catch (e) {
+          console.error('Error updating localStorage after note deletion:', e);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert('刪除備註失敗');
+    }
+  };
+  
+  // 檢查用户權限
+  const canDeleteItems = ["god", "admin"].includes(role);
 
   // Get permission label for display
   const getPermissionLabel = (permission) => {
@@ -568,7 +795,7 @@ function ProjectDetailsWithFiles() {
           <div className="sidebar-actions">
             <button 
               className="action-link" 
-              onClick={() => navigate(`/flowchart-editor/${id}`)}
+              onClick={() => setShowFlowchartModal(true)}
             >
               案件流程圖
             </button>
@@ -580,6 +807,24 @@ function ProjectDetailsWithFiles() {
                 案件資訊設定
               </button>
             )}
+            <div className="section-divider"></div>
+            <button 
+              className="action-link" 
+              onClick={() => setShowCommunicationModal(true)}
+            >
+              溝通與訊息
+            </button>
+            <button 
+              className="action-link" 
+              onClick={() => {
+                const newState = !showStickyNotes;
+                setShowStickyNotes(newState);
+                // 保存便利貼顯示狀態到localStorage
+                localStorage.setItem(`project-${id}-show-sticky-notes`, newState.toString());
+              }}
+            >
+              {showStickyNotes ? "隱藏便利貼" : "顯示便利貼"}
+            </button>
           </div>
         </div>
 
@@ -762,84 +1007,222 @@ function ProjectDetailsWithFiles() {
         </div>
       </div>
 
-      {/* Notes and communication floating windows */}
-      <div className="floating-panels">
-        <div className={`notes-panel ${showNotes ? 'expanded' : 'collapsed'}`}>
-          <button 
-            className="panel-toggle"
-            onClick={() => setShowNotes((prev) => !prev)}
-          >
-            備註 {showNotes ? "隱藏" : "顯示"}
-          </button>
-          {showNotes && (
-            <div className="panel-content">
-              <h3 className="panel-title">備註</h3>
-              <ul className="notes-list">
-                {project.notes?.map((note) => (
-                  <li key={note._id} className="note-item">
-                    <span className="note-content">{note.content}</span>
-                    <span className="note-date">
-                      {new Date(note.createdAt).toLocaleString()}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <div className="note-input-container">
-                <input
-                  className="note-input"
+      {/* 中央溝通模態框 */}
+      <div className={`communication-modal ${showCommunicationModal ? 'visible' : ''}`}>
+        <div className="communication-panel">
+          <div className="communication-header">
+            <button 
+              className={`tab-button ${communicationTab === 'messages' ? 'active' : ''}`}
+              onClick={() => setCommunicationTab('messages')}
+            >
+              溝通記錄
+            </button>
+            <button 
+              className={`tab-button ${communicationTab === 'notes' ? 'active' : ''}`}
+              onClick={() => setCommunicationTab('notes')}
+            >
+              專案備註
+            </button>
+            <button 
+              className="close-button"
+              onClick={() => setShowCommunicationModal(false)}
+            >
+              ✕
+            </button>
+          </div>
+          
+          <div className="communication-content">
+            {/* 訊息標籤內容 */}
+            <div className={`tab-content ${communicationTab === 'messages' ? 'active' : ''}`}>
+              <div className="messages-container">
+                {project.messages && project.messages.length > 0 ? (
+                  <ul className="messages-list">
+                    {project.messages.map((msg) => (
+                      <li key={msg._id} className="message-item">
+                        {canDeleteItems && (
+                          <div className="item-actions">
+                            <button 
+                              className="action-btn delete-btn"
+                              onClick={() => handleDeleteMessage(msg._id)}
+                              title="刪除"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+                        <div className="message-header">
+                          <span className="message-sender">{msg.sender || "系統"}</span>
+                          <span className="message-date">
+                            {formatDateTime(msg.createdAt)}
+                          </span>
+                        </div>
+                        <span className="message-content">{msg.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="empty-state">
+                    <div className="empty-icon">💬</div>
+                    <div className="empty-text">暫無訊息記錄，開始對話吧</div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="input-container">
+                <textarea
+                  className="content-input"
+                  placeholder="輸入訊息 (將同步至Discord)"
+                  value={messageContent}
+                  onChange={(e) => setMessageContent(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault(); // 阻止換行
+                      if (messageContent.trim()) handleAddMessage();
+                    }
+                  }}
+                  style={{height: Math.min(120, Math.max(40, messageContent.split('\n').length * 24)) + 'px'}}
+                />
+                
+                <div className="input-actions">
+                  <div></div> {/* 留空以對齊右側按鈕 */}
+                  
+                  <div className="action-buttons">
+                    {messageContent && (
+                      <button 
+                        className="cancel-btn"
+                        onClick={() => setMessageContent("")}
+                      >
+                        取消
+                      </button>
+                    )}
+                    <button 
+                      className="send-btn"
+                      onClick={handleAddMessage}
+                      disabled={!messageContent.trim()}
+                    >
+                      <span>發送</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* 備註標籤內容 */}
+            <div className={`tab-content ${communicationTab === 'notes' ? 'active' : ''}`}>
+              <div className="notes-container">
+                {project.notes && project.notes.length > 0 ? (
+                  <ul className="notes-list">
+                    {project.notes.map((note) => (
+                      <li key={note._id} className="note-item">
+                        {canDeleteItems && (
+                          <div className="item-actions">
+                            <button 
+                              className="action-btn delete-btn"
+                              onClick={() => handleDeleteNote(note._id)}
+                              title="刪除"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+                        <span className="note-content">{note.content}</span>
+                        <span className="note-date">
+                          {formatDateTime(note.createdAt)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="empty-state">
+                    <div className="empty-icon">📝</div>
+                    <div className="empty-text">暫無備註，新增一則吧</div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="input-container">
+                <textarea
+                  className="content-input"
                   placeholder="輸入備註"
                   value={noteContent}
                   onChange={(e) => setNoteContent(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault(); // 阻止換行
+                      if (noteContent.trim()) handleAddNote();
+                    }
+                  }}
+                  style={{height: Math.min(120, Math.max(40, noteContent.split('\n').length * 24)) + 'px'}}
                 />
-                <button 
-                  className="add-note-btn"
-                  onClick={handleAddNote}
-                >
-                  新增備註
-                </button>
+                
+                <div className="input-actions">
+                  <div className="note-colors">
+                    {['yellow', 'green', 'blue', 'pink'].map(color => (
+                      <div 
+                        key={color}
+                        className={`color-dot ${color} ${selectedNoteColor === color ? 'selected' : ''}`}
+                        onClick={() => setSelectedNoteColor(color)}
+                        title={color}
+                      />
+                    ))}
+                  </div>
+                  
+                  <div className="action-buttons">
+                    {noteContent && (
+                      <button 
+                        className="cancel-btn"
+                        onClick={() => setNoteContent("")}
+                      >
+                        取消
+                      </button>
+                    )}
+                    <button 
+                      className="send-btn"
+                      onClick={handleAddNote}
+                      disabled={!noteContent.trim()}
+                    >
+                      新增便利貼
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
-        </div>
-        
-        <div className={`messages-panel ${showMessages ? 'expanded' : 'collapsed'}`}>
-          <button 
-            className="panel-toggle"
-            onClick={() => setShowMessages((prev) => !prev)}
-          >
-            溝通 {showMessages ? "隱藏" : "顯示"}
-          </button>
-          {showMessages && (
-            <div className="panel-content">
-              <h3 className="panel-title">溝通記錄</h3>
-              <ul className="messages-list">
-                {project.messages?.map((msg) => (
-                  <li key={msg._id} className="message-item">
-                    <span className="message-content">{msg.message}</span>
-                    <span className="message-date">
-                      {new Date(msg.createdAt).toLocaleString()}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <div className="message-input-container">
-                <input
-                  className="message-input"
-                  placeholder="輸入訊息"
-                  value={messageContent}
-                  onChange={(e) => setMessageContent(e.target.value)}
-                />
-                <button 
-                  className="add-message-btn"
-                  onClick={handleAddMessage}
-                >
-                  新增訊息
-                </button>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
+      
+      {/* 便利貼容器 */}
+      {showStickyNotes && (
+        <div className="sticky-notes-container">
+          {stickyNotes.map(note => (
+            <div 
+              key={note.id} 
+              className={`sticky-note ${note.color}`}
+              style={{
+                top: `${note.y}px`,
+                left: `${note.x}px`,
+                '--rotate': note.rotate
+              }}
+              onMouseDown={(e) => handleStickyNoteMouseDown(e, note.id)}
+            >
+              {canDeleteItems && (
+                <div className="sticky-note-actions">
+                  <button 
+                    className="action-btn"
+                    onClick={() => handleDeleteNote(note.id)}
+                    title="刪除"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+              <div className="sticky-note-content">{note.content}</div>
+              <div className="sticky-note-date">{formatDateTime(note.createdAt)}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Permissions Modal */}
       {showPermissionsModal && selectedPage && (
@@ -885,6 +1268,35 @@ function ProjectDetailsWithFiles() {
               >
                 保存設定
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 流程圖彈窗 */}
+      {showFlowchartModal && (
+        <div className="flowchart-modal">
+          <div className="flowchart-modal-content">
+            <div className="flowchart-modal-header">
+              <h3 className="flowchart-modal-title">案件流程圖 - {project.projectName}</h3>
+              <button 
+                className="flowchart-modal-close"
+                onClick={() => setShowFlowchartModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flowchart-modal-body">
+              <iframe 
+                src={`/flowchart-editor/${id}`}
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  border: 'none',
+                  display: 'block'
+                }}
+                title="專案流程圖"
+              />
             </div>
           </div>
         </div>

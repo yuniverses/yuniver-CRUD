@@ -56,6 +56,17 @@ export const addNote = async (projectId, content, token) => {
   return res.data;
 };
 
+// 刪除備註
+export const deleteNote = async (projectId, noteId, token) => {
+  const res = await axios.delete(
+    `${API_URL}/projects/${projectId}/notes/${noteId}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  return res.data;
+};
+
 // 新增溝通訊息
 export const addMessage = async (projectId, message, token) => {
   const res = await axios.post(

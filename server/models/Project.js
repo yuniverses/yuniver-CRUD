@@ -11,6 +11,15 @@ const noteSchema = new mongoose.Schema({
 
 const messageSchema = new mongoose.Schema({
   message: String,
+  sender: {
+    type: String,
+    required: true
+  },
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Project",
+    required: true
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -31,6 +40,11 @@ const projectSchema = new mongoose.Schema({
   period: {
     startDate: Date,
     endDate: Date,
+  },
+  // Discord相關欄位
+  discordChannelId: {
+    type: String,
+    default: null
   },
   // 新增存取設定，access 可為 "edit" 或 "view"
   accessControl: [

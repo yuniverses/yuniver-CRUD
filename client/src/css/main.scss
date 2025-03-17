@@ -410,6 +410,7 @@
           display: flex;
           justify-content: flex-end;
           gap: 10px;
+          z-index: 90;
           
           .editor-btn {
             background-color: #f1f1f1;
@@ -506,111 +507,717 @@
     }
   }
   
-  // 浮動的備註與訊息區
-  .floating-panels {
+  // 中央訊息和備註面板
+  .communication-modal {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
     
-    .notes-panel, .messages-panel {
-      width: 300px;
+    &.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .communication-panel {
+      width: 700px;
+      height: 550px;
       background-color: #ffffff;
-      border: 1px solid #e0e0e0;
-      border-radius: 0;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(20px);
+      transition: transform 0.3s ease;
       
-      &.expanded {
-        height: auto;
-        max-height: 400px;
+      &.visible {
+        transform: translateY(0);
       }
       
-      &.collapsed {
-        height: 40px;
-      }
-      
-      .panel-toggle {
+      // 通訊面板頂部導航
+      .communication-header {
         width: 100%;
-        background-color: #f1f1f1;
-        color: #333;
-        border: none;
-        padding: 10px;
-        text-align: left;
-        cursor: pointer;
-        font-size: 14px;
+        background-color: #333;
+        color: white;
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid #444;
         
-        &:hover {
-          background-color: #e0e0e0;
+        .tab-button {
+          padding: 15px 25px;
+          background: none;
+          border: none;
+          color: #ccc;
+          font-size: 14px;
+          cursor: pointer;
+          position: relative;
+          transition: all 0.2s ease;
+          
+          &.active {
+            color: white;
+            background-color: #444;
+            
+            &:after {
+              content: '';
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              width: 100%;
+              height: 3px;
+              background-color: #4a76a8;
+            }
+          }
+          
+          &:hover:not(.active) {
+            background-color: #3a3a3a;
+          }
+        }
+        
+        .close-button {
+          margin-left: auto;
+          background: none;
+          border: none;
+          color: white;
+          padding: 8px 15px;
+          cursor: pointer;
+          font-size: 18px;
+          
+          &:hover {
+            color: #ff6b6b;
+          }
         }
       }
       
-      .panel-content {
-        padding: 15px;
-        max-height: 350px;
-        overflow-y: auto;
+      // 通訊面板內容區
+      .communication-content {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
         
-        .panel-title {
-          font-size: 14px;
-          color: #333;
-          margin-top: 0;
-          margin-bottom: 15px;
+        .tab-content {
+          flex: 1;
+          display: none;
+          flex-direction: column;
+          height: 100%;
+          
+          &.active {
+            display: flex;
+          }
         }
         
-        .notes-list, .messages-list {
-          list-style: none;
-          padding: 0;
-          margin: 0 0 15px 0;
+        // 訊息列表和備註列表容器
+        .messages-container, .notes-container {
+          flex: 1;
+          padding: 20px;
+          overflow-y: auto;
+          background-color: #f9f9f9;
           
-          .note-item, .message-item {
+          .empty-state {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #999;
+            
+            .empty-icon {
+              font-size: 40px;
+              margin-bottom: 10px;
+              opacity: 0.5;
+            }
+            
+            .empty-text {
+              font-size: 14px;
+            }
+          }
+          
+          // 訊息和備註列表
+          .messages-list, .notes-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 15px 0;
+            
+            .message-item, .note-item {
+              font-size: 14px;
+              color: #333;
+              margin-bottom: 16px;
+              padding: 12px;
+              border-radius: 12px;
+              background-color: #f5f5f5;
+              position: relative;
+              box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+              transition: all 0.2s ease;
+              
+              &:hover {
+                background-color: #f0f0f0;
+              }
+              
+              &:hover .item-actions,
+              &:hover .note-date,
+              &:hover .message-date {
+                opacity: 1;
+              }
+              
+              .item-actions {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                opacity: 0;
+                transition: opacity 0.2s;
+                display: flex;
+                gap: 5px;
+                z-index: 2;
+                
+                .action-btn {
+                  background: rgba(255,255,255,0.8);
+                  border: none;
+                  color: #888;
+                  cursor: pointer;
+                  font-size: 12px;
+                  width: 20px;
+                  height: 20px;
+                  border-radius: 50%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  
+                  &:hover {
+                    color: #d9534f;
+                    background: white;
+                  }
+                }
+              }
+              
+              .message-header {
+                display: flex;
+                align-items: center;
+                margin-bottom: 8px;
+                
+                .message-sender {
+                  font-weight: bold;
+                  color: #4a76a8;
+                  margin-right: 8px;
+                }
+                
+                .message-date {
+                  font-size: 11px;
+                  color: #999;
+                  opacity: 0;
+                  transition: opacity 0.2s;
+                }
+              }
+              
+              &.my-message {
+                background-color: #e1f5fe;
+                margin-left: 40px;
+                
+                .message-sender {
+                  color: #0288d1;
+                }
+              }
+              
+              &.other-message {
+                background-color: #f5f5f5;
+                margin-right: 40px;
+              }
+              
+              .note-content, .message-content {
+                display: block;
+                margin-bottom: 5px;
+                word-break: break-word;
+                line-height: 1.5;
+              }
+              
+              .note-date {
+                display: block;
+                font-size: 11px;
+                color: #999;
+                text-align: right;
+                margin-top: 5px;
+                opacity: 0;
+                transition: opacity 0.2s;
+              }
+            }
+          }
+          
+          // 輸入欄區域
+          .input-container {
+            padding: 15px 20px;
+            background-color: white;
+            border-top: 1px solid #eee;
+            
+            textarea.content-input {
+              width: 100%;
+              border: 1px solid #e0e0e0;
+              padding: 12px 15px;
+              margin-bottom: 10px;
+              font-size: 14px;
+              border-radius: 20px;
+              resize: none;
+              height: auto;
+              min-height: 40px;
+              max-height: 120px;
+              transition: all 0.2s ease;
+              
+              &:focus {
+                outline: none;
+                border-color: #4a76a8;
+                box-shadow: 0 0 0 2px rgba(74,118,168,0.1);
+              }
+            }
+            
+            .input-actions {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              
+              .note-colors {
+                display: flex;
+                gap: 8px;
+                
+                .color-dot {
+                  width: 20px;
+                  height: 20px;
+                  border-radius: 50%;
+                  cursor: pointer;
+                  border: 2px solid transparent;
+                  
+                  &.selected {
+                    border-color: #333;
+                  }
+                  
+                  &.yellow { background-color: #fff8dc; }
+                  &.green { background-color: #e8f8e8; }
+                  &.blue { background-color: #e8f0ff; }
+                  &.pink { background-color: #ffe8f0; }
+                }
+              }
+              
+              .action-buttons {
+                display: flex;
+                gap: 10px;
+                
+                .cancel-btn {
+                  background-color: #f1f1f1;
+                  color: #333;
+                  border: none;
+                  padding: 8px 15px;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  font-size: 14px;
+                  
+                  &:hover {
+                    background-color: #e0e0e0;
+                  }
+                }
+                
+                .send-btn {
+                  background-color: #333;
+                  color: white;
+                  border: none;
+                  padding: 8px 15px;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  font-size: 14px;
+                  display: flex;
+                  align-items: center;
+                  gap: 5px;
+                  
+                  &:hover {
+                    background-color: #555;
+                  }
+                  
+                  svg {
+                    margin-left: 5px;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // 便利貼風格的備註
+  .sticky-notes-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 900;
+    
+    .sticky-note {
+      position: absolute;
+      width: 200px;
+      min-height: 150px;
+      padding: 15px;
+      background-color: #fff8dc;
+      border-radius: 2px;
+      box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+      cursor: move;
+      pointer-events: auto;
+      transform: rotate(var(--rotate, 0deg));
+      
+      .sticky-note-content {
+        font-size: 14px;
+        line-height: 1.4;
+        margin-bottom: 10px;
+        word-break: break-word;
+      }
+      
+      .sticky-note-date {
+        font-size: 10px;
+        color: #999;
+        text-align: right;
+      }
+      
+      .sticky-note-actions {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        opacity: 0;
+        transition: opacity 0.2s;
+        
+        .action-btn {
+          background: none;
+          border: none;
+          color: #888;
+          cursor: pointer;
+          font-size: 12px;
+          width: 20px;
+          height: 20px;
+          
+          &:hover {
+            color: #d9534f;
+          }
+        }
+      }
+      
+      &:hover .sticky-note-actions {
+        opacity: 1;
+      }
+      
+      &.yellow { background-color: #fff8dc; }
+      &.green { background-color: #e8f8e8; }
+      &.blue { background-color: #e8f0ff; }
+      &.pink { background-color: #ffe8f0; }
+    }
+  
+      
+  // 通訊面板頂部導航
+  .communication-header {
+    width: 100%;
+    background-color: #333;
+    color: white;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #444;
+    
+    .tab-button {
+      padding: 15px 25px;
+      background: none;
+      border: none;
+      color: #ccc;
+      font-size: 14px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+      
+      &.active {
+        color: white;
+        background-color: #444;
+        
+        &:after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          height: 3px;
+          background-color: #4a76a8;
+        }
+      }
+      
+      &:hover:not(.active) {
+        background-color: #3a3a3a;
+      }
+    }
+    
+    .close-button {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: white;
+      padding: 8px 15px;
+      cursor: pointer;
+      font-size: 18px;
+      
+      &:hover {
+        color: #ff6b6b;
+      }
+    }
+  }
+  
+  // 通訊面板內容區
+  .communication-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    
+    .tab-content {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      
+      &.active {
+        display: flex;
+      }
+    }
+  }
+      
+  // 訊息列表和備註列表容器
+  .messages-container, .notes-container {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background-color: #f9f9f9;
+    
+    .empty-state {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #999;
+      
+      .empty-icon {
+        font-size: 40px;
+        margin-bottom: 10px;
+        opacity: 0.5;
+      }
+      
+      .empty-text {
+        font-size: 14px;
+      }
+    }
+        
+  // 訊息和備註列表
+  .messages-list, .notes-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 15px 0;
+    
+    .message-item, .note-item {
             font-size: 14px;
             color: #333;
-            margin-bottom: 10px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #f1f1f1;
+            margin-bottom: 16px;
+            padding: 12px;
+            border-radius: 12px;
+            background-color: #f5f5f5;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+            
+            &:hover {
+              background-color: #f0f0f0;
+            }
+            
+            &:hover .item-actions,
+            &:hover .note-date,
+            &:hover .message-date {
+              opacity: 1;
+            }
+            
+            .item-actions {
+              position: absolute;
+              top: 8px;
+              right: 8px;
+              opacity: 0;
+              transition: opacity 0.2s;
+              display: flex;
+              gap: 5px;
+              z-index: 2;
+              
+              .action-btn {
+                background: rgba(255,255,255,0.8);
+                border: none;
+                color: #888;
+                cursor: pointer;
+                font-size: 12px;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                
+                &:hover {
+                  color: #d9534f;
+                  background: white;
+                }
+              }
+            }
+            
+            .message-header {
+              display: flex;
+              align-items: center;
+              margin-bottom: 8px;
+              
+              .message-sender {
+                font-weight: bold;
+                color: #4a76a8;
+                margin-right: 8px;
+              }
+              
+              .message-date {
+                font-size: 11px;
+                color: #999;
+                opacity: 0;
+                transition: opacity 0.2s;
+              }
+            }
+            
+            &.my-message {
+              background-color: #e1f5fe;
+              margin-left: 40px;
+              
+              .message-sender {
+                color: #0288d1;
+              }
+            }
+            
+            &.other-message {
+              background-color: #f5f5f5;
+              margin-right: 40px;
+            }
             
             .note-content, .message-content {
               display: block;
               margin-bottom: 5px;
+              word-break: break-word;
+              line-height: 1.5;
             }
             
-            .note-date, .message-date {
+            .note-date {
               display: block;
-              font-size: 12px;
+              font-size: 11px;
               color: #999;
+              text-align: right;
+              margin-top: 5px;
+              opacity: 0;
+              transition: opacity 0.2s;
             }
           }
         }
         
-        .note-input-container, .message-input-container {
-          display: flex;
-          flex-direction: column;
+  // 輸入欄區域
+  .input-container {
+    padding: 15px 20px;
+    background-color: white;
+    border-top: 1px solid #eee;
+    
+    textarea.content-input {
+      width: 100%;
+      border: 1px solid #e0e0e0;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      border-radius: 20px;
+      resize: none;
+      height: auto;
+      min-height: 40px;
+      max-height: 120px;
+      transition: all 0.2s ease;
+      
+      &:focus {
+        outline: none;
+        border-color: #4a76a8;
+        box-shadow: 0 0 0 2px rgba(74,118,168,0.1);
+      }
+    }
+    
+    .input-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      
+      .note-colors {
+        display: flex;
+        gap: 8px;
+        
+        .color-dot {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          cursor: pointer;
+          border: 2px solid transparent;
           
-          .note-input, .message-input {
-            border: 1px solid #e0e0e0;
-            padding: 8px;
-            margin-bottom: 10px;
-            font-size: 14px;
+          &.selected {
+            border-color: #333;
           }
           
-          .add-note-btn, .add-message-btn {
-            align-self: flex-end;
-            background-color: #333;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 0;
-            cursor: pointer;
-            font-size: 14px;
-            
-            &:hover {
-              background-color: #555;
-            }
+          &.yellow { background-color: #fff8dc; }
+          &.green { background-color: #e8f8e8; }
+          &.blue { background-color: #e8f0ff; }
+          &.pink { background-color: #ffe8f0; }
+        }
+      }
+      
+      .action-buttons {
+        display: flex;
+        gap: 10px;
+        
+        .cancel-btn {
+          background-color: #f1f1f1;
+          color: #333;
+          border: none;
+          padding: 8px 15px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          
+          &:hover {
+            background-color: #e0e0e0;
           }
         }
+        
+        .send-btn {
+          background-color: #333;
+          color: white;
+          border: none;
+          padding: 8px 15px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          
+          &:hover {
+            background-color: #555;
+          }
+          
+          svg {
+            margin-left: 5px;
+          }
+        }
+      }
+    }
+  }
       }
     }
   }
@@ -626,7 +1233,6 @@
   z-index: 1000;
   
   }
-}
 
 
 
@@ -661,4 +1267,3 @@ body {
     100% { transform: rotate(360deg); }
   }
 }
-

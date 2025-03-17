@@ -1,0 +1,228 @@
+/* 共享頁面布局樣式 - 基於 ProjectDetailsWithFiles 頁面的風格 */
+
+/* 主容器設置 */
+.yuniver-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background-color: #ffffff;
+}
+
+/* 頂部導航條 */
+.yuniver-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 35px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.yuniver-logo {
+  display: flex;
+  flex-direction: column;
+}
+
+.yuniver-logo h1 {
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.yuniver-logo h1 .registered-mark {
+  font-size: 14px;
+  vertical-align: super;
+}
+
+.yuniver-logo .subtitle {
+  font-size: 12px;
+  color: #666;
+  margin: 0;
+}
+
+.main-nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.main-nav a {
+  color: #333;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 5px 10px;
+}
+
+.main-nav a.active {
+  font-weight: bold;
+  border-bottom: 2px solid #333;
+}
+
+.main-nav a.logout-btn {
+  color: #333;
+}
+
+/* 主要內容區域 */
+.yuniver-content {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 70px);
+}
+
+/* 側邊欄 */
+.yuniver-sidebar {
+  width: 250px;
+  padding: 20px;
+  background-color: #ffffff;
+  border-right: 1px dotted #ccc;
+  overflow-y: auto;
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+}
+
+.sidebar-menu li {
+  margin-bottom: 15px;
+}
+
+.sidebar-menu a {
+  display: block;
+  color: #333;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+.sidebar-menu a:hover {
+  color: #000;
+  background-color: #f9f9f9;
+}
+
+.sidebar-menu a.active {
+  font-weight: bold;
+  border-left: 3px solid #333;
+  padding-left: 10px;
+}
+
+/* 主內容區 */
+.main-content {
+  flex: 1;
+  padding: 20px;
+  background-color: #fff;
+  overflow-y: auto;
+}
+
+.page-title {
+  font-size: 24px;
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* 表格樣式 */
+.yuniver-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.yuniver-table th {
+  background-color: #f5f5f5;
+  color: #333;
+  font-weight: normal;
+  padding: 5px 0 5px 18px;
+  text-align: left;
+  border-bottom: 2px solid #e0e0e0;
+  font-size: 12px;
+  color: #959595;
+}
+
+.yuniver-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.yuniver-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+.yuniver-table .action-link {
+  color: #4a76a8;
+  text-decoration: none;
+}
+
+.yuniver-table .action-link:hover {
+  text-decoration: underline;
+}
+
+/* 按鈕樣式 */
+.yuniver-btn {
+  background-color: #333;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-block;
+  text-decoration: none;
+  margin-right: 10px;
+}
+
+.yuniver-btn:hover {
+  background-color: #555;
+}
+
+.yuniver-btn.secondary {
+  background-color: #f1f1f1;
+  color: #333;
+}
+
+.yuniver-btn.secondary:hover {
+  background-color: #e0e0e0;
+}
+
+.yuniver-btn.danger {
+  background-color: #d9534f;
+  color: white;
+}
+
+.yuniver-btn.danger:hover {
+  background-color: #c9302c;
+}
+
+/* 載入中顯示 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #333;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 分隔線 */
+.section-divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 15px 0;
+}

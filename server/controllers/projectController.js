@@ -42,8 +42,29 @@ exports.createProject = async (req, res) => {
       tasks,
     });
     await newProject.save();
+    
+    // 為專案創建Discord頻道
+    try {
+      const discordBot = require('../utils/discordBot');
+      console.log('準備為專案創建Discord頻道:', newProject.projectName);
+      const channelId = await discordBot.createChannelForProject(newProject);
+      
+      if (channelId) {
+        console.log('成功創建Discord頻道，ID:', channelId);
+        // 更新專案的Discord頻道ID
+        newProject.discordChannelId = channelId;
+        await newProject.save();
+        console.log('已將頻道ID儲存到專案');
+      } else {
+        console.error('無法創建Discord頻道');
+      }
+    } catch (discordError) {
+      console.error('Discord頻道創建過程中發生錯誤:', discordError);
+    }
+    
     res.status(201).json({ message: "Project created", project: newProject });
   } catch (err) {
+    console.error("Create project error:", err);
     res.status(500).json({ message: "Failed to create project" });
   }
 };
@@ -51,12 +72,23 @@ exports.createProject = async (req, res) => {
 // 取得單一專案詳細資訊
 exports.getProjectDetails = async (req, res) => {
   try {
+    // 查找專案
     const project = await Project.findById(req.params.id)
       .populate("owner", "username")
       .populate("teamMembers", "username");
+    
     if (!project) return res.status(404).json({ message: "Project not found" });
+    
+    // 確保只返回屬於此專案的訊息
+    if (project.messages && project.messages.length > 0) {
+      project.messages = project.messages.filter(msg => 
+        !msg.projectId || msg.projectId.toString() === project._id.toString()
+      );
+    }
+    
     res.json(project);
   } catch (err) {
+    console.error("Get project details error:", err);
     res.status(500).json({ message: "Failed to get project details" });
   }
 };
@@ -92,17 +124,59 @@ exports.addNote = async (req, res) => {
   }
 };
 
+// 刪除備註(便條紙)
+exports.deleteNote = async (req, res) => {
+  try {
+    const { id, noteId } = req.params;
+    const project = await Project.findById(id);
+    if (!project) return res.status(404).json({ message: "Project not found" });
+
+    // 找出並移除指定的備註
+    const noteIndex = project.notes.findIndex(note => note._id.toString() === noteId);
+    if (noteIndex === -1) return res.status(404).json({ message: "Note not found" });
+
+    // 從 notes 數組中移除備註
+    project.notes.splice(noteIndex, 1);
+    await project.save();
+
+    res.json({ message: "Note deleted successfully", project });
+  } catch (err) {
+    console.error("Delete note error:", err);
+    res.status(500).json({ message: "Failed to delete note" });
+  }
+};
+
 // 新增溝通訊息
 exports.addMessage = async (req, res) => {
   try {
     const { message } = req.body;
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ message: "Project not found" });
-
-    project.messages.push({ message });
+    
+    // 獲取發送者用戶名
+    const sender = req.user ? req.user.username : 'Unknown User';
+    
+    // 添加訊息到專案，確保包含projectId
+    project.messages.push({ message, sender, projectId: project._id });
     await project.save();
+    
+    // 如果有Discord頻道ID，將訊息同步至Discord
+    if (project.discordChannelId) {
+      try {
+        console.log('專案有Discord頻道ID，嘗試同步訊息:', project.discordChannelId);
+        const discordBot = require('../utils/discordBot');
+        const sent = await discordBot.sendMessageToDiscord(project.discordChannelId, sender, message);
+        console.log('Discord訊息同步結果:', sent ? '成功' : '失敗');
+      } catch (discordError) {
+        console.error('同步訊息到Discord時發生錯誤:', discordError);
+      }
+    } else {
+      console.log('專案沒有Discord頻道ID，無法同步訊息');
+    }
+    
     res.json({ message: "Message added", project });
   } catch (err) {
+    console.error("Add message error:", err);
     res.status(500).json({ message: "Failed to add message" });
   }
 };

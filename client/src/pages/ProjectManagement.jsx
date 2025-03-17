@@ -2,12 +2,15 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { fetchAllProjects } from '../api/project';
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import "../css/shared-layout.css";
+import "../css/custom-communication.css";
 
 const ProjectManagement = () => {
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [taskFilter, setTaskFilter] = useState('all'); // 'all' or 'inProgress'
+  const [activeTab, setActiveTab] = useState("projectmanagement");
   const token = localStorage.getItem('token');
 
   // 從 token 解碼取得用戶資訊（id 與 role）
@@ -28,6 +31,16 @@ const ProjectManagement = () => {
   };
 
   const user = getUserFromToken();
+
+  // 簡單權限檢查函式，檢查當前角色是否在允許列表中
+  const hasAccess = (role, allowedRoles) => {
+    return allowedRoles.includes(role);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    window.location.href = "/login";
+  };
 
   useEffect(() => {
     const loadProjects = async () => {
@@ -92,52 +105,109 @@ const ProjectManagement = () => {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>專案管理</h1>
-      {user.role && (
-        <p>當前用戶角色: {user.role}</p>
-      )}
-      <div style={{ marginBottom: "20px" }}>
-        <button 
-          onClick={filterInProgressTasks}
-          style={{ 
-            marginRight: "10px", 
-            padding: "8px 16px",
-            backgroundColor: taskFilter === 'inProgress' ? "#4CAF50" : "#f1f1f1",
-            color: taskFilter === 'inProgress' ? "white" : "black",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            cursor: "pointer"
-          }}
-        >
-          顯示狀態進行中項目
-        </button>
-        <button 
-          onClick={showAllTasks}
-          style={{ 
-            padding: "8px 16px",
-            backgroundColor: taskFilter === 'all' ? "#4CAF50" : "#f1f1f1",
-            color: taskFilter === 'all' ? "white" : "black",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            cursor: "pointer"
-          }}
-        >
-          顯示所有
-        </button>
+    <div className="yuniver-container">
+      {/* Header */}
+      <header className="yuniver-header">
+        <div className="yuniver-logo">
+          <h1>YUNIVER <span className="registered-mark">®</span></h1>
+          <p className="subtitle">案件進度及檔案系統</p>
+        </div>
+        <nav className="main-nav">
+          <a href="/" className={activeTab === "main" ? "active" : ""} onClick={() => setActiveTab("main")}>
+            主頁
+          </a>
+          <a href="/mail" className={activeTab === "mail" ? "active" : ""} onClick={() => setActiveTab("mail")}>
+            mail
+          </a>
+          <a href="/logout" className="logout-btn" onClick={handleLogout}>登出</a>
+        </nav>
+      </header>
+
+      <div className="yuniver-content">
+        {/* 左側選單 */}
+        <div className="yuniver-sidebar">
+          <ul className="sidebar-menu">
+            <li>
+              <Link to="/projects">專案列表</Link>
+            </li>
+            {/* 僅當用戶角色為 god 或 admin 時才顯示 */}
+            {hasAccess(user.role, ["god", "admin", "employee"]) && (
+              <li>
+                <Link to="/mail">Mail</Link>
+              </li>
+            )}
+            {/* 僅當用戶角色為 god 或 admin 時才顯示 */}
+            {hasAccess(user.role, ["god", "admin", "employee"]) && (
+              <li>
+                <Link to="/internal-files">內部檔案</Link>
+              </li>
+            )}
+            {/* 僅當用戶角色為 god 或 admin 時才顯示 */}
+            {hasAccess(user.role, ["god", "admin"]) && (
+              <li>
+                <Link to="/project-manager">專案編輯與設定</Link>
+              </li>
+            )}
+            {/* 僅當用戶角色為 god 或 admin 時才顯示 */}
+            {hasAccess(user.role, ["god", "admin","employee"]) && (
+              <li>
+                <Link to="/ProjectManagement" className="active">專案管理ALL</Link>
+              </li>
+            )}
+            {/* 僅當用戶角色為 god 或 admin 時才顯示 */}
+            {hasAccess(user.role, ["god", "admin", "employee"]) && (
+              <li>
+                <Link to="/quotation">報價單</Link>
+              </li>
+            )}
+            
+            {/* 僅當用戶角色為 god 或 admin 時才顯示 */}
+            {hasAccess(user.role, ["god", "admin"]) && (
+              <li>
+                <Link to="/usermanagement">身份管理</Link>
+              </li>
+            )}
+          </ul>
+        </div>
+
+        {/* 右側主內容區 */}
+        <div className="main-content">
+          {/* <h2 className="page-title">專案管理</h2>
+          
+          {user.role && (
+            <p style={{ marginBottom: "20px" }}>當前用戶角色: <strong>{user.role}</strong></p>
+          )} */}
+          
+          <div style={{ marginBottom: "30px" }}>
+            <button 
+              onClick={filterInProgressTasks}
+              className={`yuniver-btn yuniver-filter-btn ${taskFilter === 'inProgress' ? '' : 'secondary'}`}
+            >
+              顯示狀態進行中項目
+            </button>
+            <button 
+              onClick={showAllTasks}
+              className={`yuniver-btn yuniver-filter-btn ${taskFilter === 'all' ? '' : 'secondary'}`}
+            >
+              顯示所有
+            </button>
+          </div>
+          
+          {filteredProjects.length === 0 ? (
+            <p className="no-data-message">您沒有權限查看任何專案，或目前沒有專案。</p>
+          ) : (
+            filteredProjects.map(project => (
+              <ProjectFlowchartEditor
+                key={project._id}
+                project={project}
+                token={token}
+                updateProjectFlowchart={updateProjectFlowchart}
+                taskFilter={taskFilter}
+              />
+            ))
+          )}
+        </div>
       </div>
-      {filteredProjects.length === 0 ? (
-        <p>您沒有權限查看任何專案，或目前沒有專案。</p>
-      ) : (
-        filteredProjects.map(project => (
-            <ProjectFlowchartEditor
-              project={project}
-              token={token}
-              updateProjectFlowchart={updateProjectFlowchart}
-              taskFilter={taskFilter}
-            />
-        ))
-      )}
     </div>
   );
 };
@@ -147,6 +217,10 @@ const ProjectFlowchartEditor = ({ project, token, updateProjectFlowchart, taskFi
   const [nodes, setNodes] = useState(project.flowChart || []);
   // 用來控制 Phase 的展開／摺疊狀態（key 為 Phase 的 id）
   const [collapsedPhases, setCollapsedPhases] = useState({});
+  // 記錄是否有更動過
+  const [hasChanged, setHasChanged] = useState(false);
+  // 彈窗控制
+  const [showFlowchartModal, setShowFlowchartModal] = useState(false);
   // 過濾後的節點
   const filteredNodes = taskFilter === 'all' 
     ? nodes 
@@ -157,6 +231,7 @@ const ProjectFlowchartEditor = ({ project, token, updateProjectFlowchart, taskFi
 
   // 更新節點內容
   const updateNode = (nodeId, field, value) => {
+    setHasChanged(true);
     setNodes(prevNodes =>
       prevNodes.map(n => (n.id === nodeId ? { ...n, [field]: value } : n))
     );
@@ -172,6 +247,7 @@ const ProjectFlowchartEditor = ({ project, token, updateProjectFlowchart, taskFi
 
   // 移動 Phase 排序（上下箭頭）
   const movePhase = (phaseId, direction) => {
+    setHasChanged(true);
     setNodes(prevNodes => {
       const phases = prevNodes.filter(n => n.type === 'phase');
       const others = prevNodes.filter(n => n.type !== 'phase');
@@ -186,6 +262,7 @@ const ProjectFlowchartEditor = ({ project, token, updateProjectFlowchart, taskFi
 
   // 移動 Task 排序（僅針對屬於同一 Phase 的 Task）
   const moveTask = (taskId, phaseId, direction) => {
+    setHasChanged(true);
     setNodes(prevNodes => {
       const tasks = prevNodes.filter(n => n.type === 'task' && String(n.containerId) === String(phaseId));
       const others = prevNodes.filter(n => !(n.type === 'task' && String(n.containerId) === String(phaseId)));
@@ -208,11 +285,12 @@ const ProjectFlowchartEditor = ({ project, token, updateProjectFlowchart, taskFi
         { flowChart: nodes },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("Flowchart updated successfully!");
+      alert("流程圖已成功更新!");
       updateProjectFlowchart(projectId, nodes);
+      setHasChanged(false);
     } catch (error) {
       console.error("Failed to update flowchart:", error);
-      alert("Save failed.");
+      alert("儲存失敗.");
     }
   };
 
@@ -232,212 +310,302 @@ const ProjectFlowchartEditor = ({ project, token, updateProjectFlowchart, taskFi
         node.status === '進行中'
       );
     };
-    console.log(project);
 
     return (
-      <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ backgroundColor: "#ddd" }}>
-            <th>Type</th>
-            <th>Label</th>
-            <th>Description</th>
-            <th>Link</th>
-            <th>Status</th>
-            <th>排序</th>
-            <th>Show in Flowchart</th>
-          </tr>
-        </thead>
-        <tbody>
-          {phases.map(phase => (
-            <React.Fragment key={phase.id}>
-              {/* 只有在 phase 下有可見的任務時才顯示該 phase，或者在顯示所有時 */}
-              {(taskFilter === 'all' || phaseHasVisibleTasks(phase.id)) && (
-                <tr style={{ backgroundColor: "#f0f0f0" }}>
-                  <td>
-                    <span onClick={() => toggleCollapse(phase.id)} style={{ cursor: "pointer", marginRight: "5px" }}>
-                      {collapsedPhases[phase.id] ? "△" : "▽"}
-                    </span>
-                    Phase
+      <div>
+
+        <table className="yuniver-table">
+          <thead>
+            <tr>
+              <th>類型</th>
+              <th>名稱</th>
+              <th>描述</th>
+              <th>連結</th>
+              <th>狀態</th>
+              <th>排序</th>
+              <th>在流程圖顯示</th>
+            </tr>
+          </thead>
+          <tbody>
+            {phases.map(phase => (
+              <React.Fragment key={phase.id}>
+                {/* 只有在 phase 下有可見的任務時才顯示該 phase，或者在顯示所有時 */}
+                {(taskFilter === 'all' || phaseHasVisibleTasks(phase.id)) && (
+                  <tr className={`phase-row status-${phase.status === "未開始" ? "pending" : phase.status === "規劃中" ? "planning" : phase.status === "進行中" ? "in-progress" : phase.status === "已完成" ? "completed" : "custom"}`}>
+                    <td>
+                      <span onClick={() => toggleCollapse(phase.id)} className="yuniver-phase-toggle">
+                        {collapsedPhases[phase.id] ? "△" : "▽"}
+                      </span>
+                      Phase
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={phase.label}
+                        onChange={(e) => updateNode(phase.id, "label", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={phase.description}
+                        onChange={(e) => updateNode(phase.id, "description", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={phase.link || ""}
+                        onChange={(e) => updateNode(phase.id, "link", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      <select
+                        value={phase.status}
+                        onChange={(e) => updateNode(phase.id, "status", e.target.value)}
+                        className="form-control"
+                      >
+                        <option value="未開始">未開始</option>
+                        <option value="規劃中">規劃中</option>
+                        <option value="進行中">進行中</option>
+                        <option value="已完成">已完成</option>
+                        <option value="自訂">自訂</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button 
+                        onClick={() => movePhase(phase.id, "up")}
+                        className="yuniver-btn secondary btn-move"
+                      >↑</button>
+                      <button 
+                        onClick={() => movePhase(phase.id, "down")}
+                        className="yuniver-btn secondary btn-move"
+                      >↓</button>
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={phase.showInFlowchart !== false}
+                        onChange={(e) => updateNode(phase.id, "showInFlowchart", e.target.checked)}
+                      />
+                    </td>
+                  </tr>
+                )}
+                {!collapsedPhases[phase.id] && (taskFilter === 'all' || phaseHasVisibleTasks(phase.id)) &&
+                  nodes // 注意這裡使用 nodes 而不是 filteredNodes 來確保我們獲取所有節點
+                    .filter(task => 
+                      task.type === 'task' && 
+                      String(task.containerId) === String(phase.id) && 
+                      (taskFilter === 'all' || task.status === '進行中')
+                    )
+                    .map(task => (
+                      <tr key={task.id} className={`task-row status-${task.status === "未開始" ? "pending" : task.status === "規劃中" ? "planning" : task.status === "進行中" ? "in-progress" : task.status === "已完成" ? "completed" : "custom"}`}>
+                        <td style={{ paddingLeft: "30px" }}>Task</td>
+                        <td>
+                          <input
+                            type="text"
+                            value={task.label}
+                            onChange={(e) => updateNode(task.id, "label", e.target.value)}
+                            className="form-control"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={task.description}
+                            onChange={(e) => updateNode(task.id, "description", e.target.value)}
+                            className="form-control"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={task.link || ""}
+                            onChange={(e) => updateNode(task.id, "link", e.target.value)}
+                            className="form-control"
+                          />
+                        </td>
+                        <td>
+                          <select
+                            value={task.status}
+                            onChange={(e) => updateNode(task.id, "status", e.target.value)}
+                            className="form-control"
+                          >
+                            <option value="未開始">未開始</option>
+                            <option value="規劃中">規劃中</option>
+                            <option value="進行中">進行中</option>
+                            <option value="已完成">已完成</option>
+                            <option value="自訂">自訂</option>
+                          </select>
+                        </td>
+                        <td>
+                          <button 
+                            onClick={() => moveTask(task.id, phase.id, "up")}
+                            className="yuniver-btn secondary btn-move"
+                          >↑</button>
+                          <button 
+                            onClick={() => moveTask(task.id, phase.id, "down")}
+                            className="yuniver-btn secondary btn-move"
+                          >↓</button>
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <input
+                            type="checkbox"
+                            checked={task.showInFlowchart !== false}
+                            onChange={(e) => updateNode(task.id, "showInFlowchart", e.target.checked)}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+              </React.Fragment>
+            ))}
+            {unassignedTasks.length > 0 && (
+              <>
+                {/* <tr>
+                  <td colSpan="7" style={{ backgroundColor: "#e9e9e9", fontWeight: "bold", padding: "8px 15px" }}>
+                    未分配任務
                   </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={phase.label}
-                      onChange={(e) => updateNode(phase.id, "label", e.target.value)}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={phase.description}
-                      onChange={(e) => updateNode(phase.id, "description", e.target.value)}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={phase.link || ""}
-                      onChange={(e) => updateNode(phase.id, "link", e.target.value)}
-                    />
-                  </td>
-                  <td>
-                    <select
-                      value={phase.status}
-                      onChange={(e) => updateNode(phase.id, "status", e.target.value)}
-                    >
-                      <option value="未開始">未開始</option>
-                      <option value="規劃中">規劃中</option>
-                      <option value="進行中">進行中</option>
-                      <option value="已完成">已完成</option>
-                      <option value="自訂">自訂</option>
-                    </select>
-                  </td>
-                  <td>
-                    <button onClick={() => movePhase(phase.id, "up")}>↑</button>
-                    <button onClick={() => movePhase(phase.id, "down")}>↓</button>
-                  </td>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={phase.showInFlowchart !== false}
-                      onChange={(e) => updateNode(phase.id, "showInFlowchart", e.target.checked)}
-                    />
-                  </td>
-                </tr>
-              )}
-              {!collapsedPhases[phase.id] && (taskFilter === 'all' || phaseHasVisibleTasks(phase.id)) &&
-                nodes // 注意這裡使用 nodes 而不是 filteredNodes 來確保我們獲取所有節點
-                  .filter(task => 
-                    task.type === 'task' && 
-                    String(task.containerId) === String(phase.id) && 
-                    (taskFilter === 'all' || task.status === '進行中')
-                  )
-                  .map(task => (
-                    <tr key={task.id}>
-                      <td style={{ paddingLeft: "20px" }}>Task</td>
-                      <td>
-                        <input
-                          type="text"
-                          value={task.label}
-                          onChange={(e) => updateNode(task.id, "label", e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          value={task.description}
-                          onChange={(e) => updateNode(task.id, "description", e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          value={task.link || ""}
-                          onChange={(e) => updateNode(task.id, "link", e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <select
-                          value={task.status}
-                          onChange={(e) => updateNode(task.id, "status", e.target.value)}
-                        >
-                          <option value="未開始">未開始</option>
-                          <option value="規劃中">規劃中</option>
-                          <option value="進行中">進行中</option>
-                          <option value="已完成">已完成</option>
-                          <option value="自訂">自訂</option>
-                        </select>
-                      </td>
-                      <td>
-                        <button onClick={() => moveTask(task.id, phase.id, "up")}>↑</button>
-                        <button onClick={() => moveTask(task.id, phase.id, "down")}>↓</button>
-                      </td>
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={task.showInFlowchart !== false}
-                          onChange={(e) => updateNode(task.id, "showInFlowchart", e.target.checked)}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-            </React.Fragment>
-          ))}
-          {unassignedTasks.length > 0 && (
-            <>
-              <tr>
-                <td colSpan="7" style={{ backgroundColor: "#ccc", fontWeight: "bold" }}>
-                  Unassigned Tasks
-                </td>
-              </tr>
-              {unassignedTasks.map(task => (
-                <tr key={task.id}>
-                  <td>Task</td>
-                  <td>
-                    <input
-                      type="text"
-                      value={task.label}
-                      onChange={(e) => updateNode(task.id, "label", e.target.value)}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={task.description}
-                      onChange={(e) => updateNode(task.id, "description", e.target.value)}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={task.link || ""}
-                      onChange={(e) => updateNode(task.id, "link", e.target.value)}
-                    />
-                  </td>
-                  <td>
-                    <select
-                      value={task.status}
-                      onChange={(e) => updateNode(task.id, "status", e.target.value)}
-                    >
-                      <option value="未開始">未開始</option>
-                      <option value="規劃中">規劃中</option>
-                      <option value="進行中">進行中</option>
-                      <option value="已完成">已完成</option>
-                      <option value="自訂">自訂</option>
-                    </select>
-                  </td>
-                  <td>{/* 排序可依需求增加 */}</td>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={task.showInFlowchart !== false}
-                      onChange={(e) => updateNode(task.id, "showInFlowchart", e.target.checked)}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </>
-          )}
-        </tbody>
-        <p>
-            客戶名稱: {project.clientName} <br/>
-            負責人: {project.owner?.username || "N/A"}<br/>
-            期間: {project.period?.startDate ? new Date(project.period.startDate).toLocaleDateString() : ""}
-              {" ~ "}
-              {project.period?.endDate ? new Date(project.period.endDate).toLocaleDateString() : ""}
-            </p>
-      </table>
+                </tr> */}
+                {unassignedTasks.map(task => (
+                  <tr key={task.id} className={`task-row status-${task.status === "未開始" ? "pending" : task.status === "規劃中" ? "planning" : task.status === "進行中" ? "in-progress" : task.status === "已完成" ? "completed" : "custom"}`}>
+                    <td>Task</td>
+                    <td>
+                      <input
+                        type="text"
+                        value={task.label}
+                        onChange={(e) => updateNode(task.id, "label", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={task.description}
+                        onChange={(e) => updateNode(task.id, "description", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={task.link || ""}
+                        onChange={(e) => updateNode(task.id, "link", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      <select
+                        value={task.status}
+                        onChange={(e) => updateNode(task.id, "status", e.target.value)}
+                        className="form-control"
+                      >
+                        <option value="未開始">未開始</option>
+                        <option value="規劃中">規劃中</option>
+                        <option value="進行中">進行中</option>
+                        <option value="已完成">已完成</option>
+                        <option value="自訂">自訂</option>
+                      </select>
+                    </td>
+                    <td>{/* 排序可依需求增加 */}</td>
+                    <td style={{ textAlign: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={task.showInFlowchart !== false}
+                        onChange={(e) => updateNode(task.id, "showInFlowchart", e.target.checked)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
     );
   };
+  
   const navigate = useNavigate();
+  
   return (
-    <div style={{ marginTop: "10px", border: "1px solid #aaa", padding: "10px" }}>
-      
-      <button onClick={() => navigate(`/projects/${project._id}`)}><h3>{project.projectName}</h3></button>
+    <>
+      <div className="yuniver-flowchart-container">
+        <div className="yuniver-flowchart-header">
+          <h3 className="yuniver-flowchart-title">
+            {project.projectName || "Unnamed Project"}
+            <div className="project-hover-details">
+              <p>
+                <strong>客戶名稱:</strong> {project.clientName || "未設定"} <br />
+                <strong>負責人:</strong> {project.owner?.username || "N/A"}<br />
+                <strong>期間:</strong> {project.period?.startDate ? new Date(project.period.startDate).toLocaleDateString() : ""}
+                  {" ~ "}
+                  {project.period?.endDate ? new Date(project.period.endDate).toLocaleDateString() : ""}
+              </p>
+            </div>
+          </h3>
+          <div className="flowchart-header-buttons">
+            <button 
+              onClick={() => setShowFlowchartModal(true)}
+              className="yuniver-btn secondary"
+            >
+              查看流程圖
+            </button>
+            <button 
+              onClick={() => navigate(`/projects/${project._id}`)}
+              className="yuniver-btn secondary"
+            >
+              查看專案
+            </button>
+          </div>
+        </div>
 
-      {renderListView()}
-      <button onClick={handleSaveFlowChart} style={{ marginTop: "10px" }}>Save Flowchart</button>
-    </div>
+        <div className="yuniver-flowchart-content">
+          {renderListView()}
+          
+          {hasChanged && (
+            <div style={{ marginTop: "20px", textAlign: "center" }}>
+              <button 
+                onClick={handleSaveFlowChart}
+                className="yuniver-btn"
+              >
+                儲存流程圖
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* 流程圖彈窗 */}
+      {showFlowchartModal && (
+        <div className="flowchart-modal">
+          <div className="flowchart-modal-content">
+            <div className="flowchart-modal-header">
+              <h3 className="flowchart-modal-title">流程圖 - {project.projectName}</h3>
+              <button 
+                className="flowchart-modal-close"
+                onClick={() => setShowFlowchartModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flowchart-modal-body">
+              <iframe 
+                src={`/flowchart-editor/${project._id}`}
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  border: 'none',
+                  display: 'block'
+                }}
+                title="專案流程圖"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

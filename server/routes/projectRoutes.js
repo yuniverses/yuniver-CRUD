@@ -10,6 +10,7 @@ const {
   updateProject,
   deleteProject, // 確保有 import
   addNote,
+  deleteNote,
   addMessage,
   getFlowChart,
   updateFlowChart,
@@ -31,6 +32,7 @@ router.get(
 );
 router.put("/:id", auth, checkRole(["god", "admin"]), updateProject);
 router.post("/:id/notes", auth, addNote);
+router.delete("/:id/notes/:noteId", auth, checkRole(["god", "admin"]), deleteNote);
 router.delete("/:id", auth, checkRole(["god", "admin"]), deleteProject);
 router.post(
   "/:id/messages",

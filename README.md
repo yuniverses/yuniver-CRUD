@@ -9,6 +9,7 @@
 - ✅ **流程圖編輯**：使用 React Flow 設計流程
 - ✅ **檔案管理**：檔案上傳、下載、刪除
 - ✅ **報價單 PDF 生成**：動態生成專案報價單
+- ✅ **Discord 整合**：專案溝通記錄與 Discord 同步
 
 ---
 
@@ -36,6 +37,10 @@ cd yuniver-CRUD
 MONGO_URI=mongodb://localhost:27017/yuniverCrud
 JWT_SECRET=your_jwt_secret
 PORT=5000
+
+# Discord設定（需建立Discord機器人）
+DISCORD_BOT_TOKEN=your_discord_bot_token
+DISCORD_SERVER_ID=your_discord_server_id
 ```
 
 ### 4️⃣ **安裝後端**

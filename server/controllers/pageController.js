@@ -76,7 +76,8 @@ exports.deletePage = async (req, res) => {
     if (!page) {
       return res.status(404).json({ message: 'Page not found' });
     }
-    await page.remove();
+    // 使用 deleteOne 而不是已棄用的 remove 方法
+    await Page.deleteOne({ _id: pageId });
     res.json({ message: 'Page deleted successfully' });
   } catch (error) {
     console.error("Delete page error:", error);
