@@ -87,6 +87,7 @@
 
 .sidebar-menu li {
   margin-bottom: 15px;
+  margin-left: 15px;
 }
 
 .sidebar-menu a {
@@ -106,7 +107,8 @@
 .sidebar-menu a.active {
   font-weight: bold;
   border-left: 3px solid #333;
-  padding-left: 10px;
+  padding-left: 15px;
+  transform: translateX(-15px);
 }
 
 /* 主內容區 */

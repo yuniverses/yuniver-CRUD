@@ -364,6 +364,22 @@
             background-color: #e0e0e0;
           }
         }
+        .create-link-btn {
+          width: 100%;
+          background-color: #f1f1f1;
+          color: #333;
+          border: none;
+          padding: 10px;
+          margin-top: 10px;
+          text-align: center;
+          border-radius: 0;
+          cursor: pointer;
+          font-size: 14px;
+          
+          &:hover {
+            background-color: #e0e0e0;
+          }
+        }
       }
     }
     

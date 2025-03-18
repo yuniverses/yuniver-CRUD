@@ -92,15 +92,6 @@ function MailPage() {
       <div className="yuniver-content">
         {/* 左側選單 */}
         <div className="yuniver-sidebar">
-          <button 
-            onClick={() => setShowForm(!showForm)} 
-            className="yuniver-btn"
-            style={{ width: '100%', marginBottom: '20px' }}
-          >
-            {showForm ? '取消' : '新增郵件'}
-          </button>
-          
-          <h3 style={{ margin: '20px 0 10px 0' }}>收件匣</h3>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {inbox.map((mail) => (
               <li 
@@ -122,7 +113,7 @@ function MailPage() {
             ))}
           </ul>
           
-          <div className="section-divider"></div>
+          
           
           <ul className="sidebar-menu">
             <li>
@@ -166,6 +157,16 @@ function MailPage() {
               </li>
             )}
           </ul>
+          <div className="section-divider"></div>
+
+          <button 
+            onClick={() => setShowForm(!showForm)} 
+            className="yuniver-btn"
+            style={{ width: '88%', marginBottom: '20px', marginLeft: '15px' }}
+          >
+            {showForm ? '取消' : '新增郵件'}
+          </button>
+          
         </div>
         
         <div className="main-content">

@@ -333,8 +333,16 @@ textarea.content-input:focus {
   background-color: #f5f5f5;
 }
 
+.yuniver-table tr.phase-row.nested-phase {
+  background-color: #e8e8e8;
+}
+
 .yuniver-table tr.task-row td:first-child {
   padding-left: 30px;
+}
+
+.yuniver-table tr.other-element-row {
+  background-color: #f9f9f9;
 }
 
 .yuniver-table .form-control,
@@ -523,10 +531,40 @@ textarea.content-input:focus {
   word-break: break-all;
 }
 
-.website-frame {
-  flex: 1;
+.open-link-btn {
+  padding: 8px 15px;
+  background-color: #4a76a8;
+  color: white;
   border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 15px;
+}
+
+.open-link-btn:hover {
+  background-color: #3a5d84;
+}
+
+.iframe-container {
+  flex: 1;
+  position: relative;
   width: 100%;
+  height: 500px;
+  overflow: hidden;
+  border-radius: 4px;
+  background-color: #f5f5f5;
+}
+
+.website-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #fff;
 }
 
 /* 連結列表樣式 */
@@ -654,6 +692,12 @@ textarea.content-input:focus {
   margin-bottom: 10px;
 }
 
+.yuniver-btn.disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 /* 專案資訊卡片 */
 .yuniver-project-card {
   padding: 15px;
@@ -668,4 +712,146 @@ textarea.content-input:focus {
 
 .yuniver-project-card strong {
   font-weight: bold;
+}
+
+/* 節點編輯彈窗 */
+.node-edit-popup {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background-color: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  padding: 15px;
+  z-index: 1000;
+  border-radius: 4px;
+  width: 300px;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.popup-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.popup-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #666;
+  padding: 0;
+}
+
+.popup-close-btn:hover {
+  color: #333;
+}
+
+.popup-field {
+  margin-bottom: 12px;
+}
+
+.popup-field label {
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 5px;
+  display: block;
+  color: #555;
+}
+
+.popup-field input,
+.popup-field textarea,
+.popup-field select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-top: 3px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.popup-field input:focus,
+.popup-field textarea:focus,
+.popup-field select:focus {
+  outline: none;
+  border-color: #4a76a8;
+  box-shadow: 0 0 0 2px rgba(74, 118, 168, 0.1);
+}
+
+.popup-field textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+
+.popup-checkbox {
+  margin-top: 8px;
+}
+
+.popup-checkbox label {
+  display: flex;
+  align-items: center;
+  font-weight: normal;
+}
+
+.popup-checkbox input[type="checkbox"] {
+  width: auto;
+  margin-right: 8px;
+}
+
+.popup-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.popup-checkbox-group label {
+  display: flex;
+  align-items: center;
+  font-weight: normal;
+}
+
+.popup-checkbox-group input[type="checkbox"] {
+  width: auto;
+  margin-right: 8px;
+}
+
+.popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.popup-done-btn {
+  padding: 6px 15px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.popup-done-btn:hover {
+  background-color: #45a049;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }

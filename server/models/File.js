@@ -15,6 +15,13 @@ const fileSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  // 外部連結相關欄位
+  isExternalLink: {
+    type: Boolean,
+    default: false
+  },
+  url: String,
+  description: String
 });
 
 module.exports = mongoose.model('File', fileSchema);

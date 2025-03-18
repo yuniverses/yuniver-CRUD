@@ -151,7 +151,6 @@ const CustomFlowChartEditor = () => {
   const token = localStorage.getItem('token');
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
   const containerRef = useRef(null);
-  const popupRef = useRef(null);
 
   // 取得角色 (假設 token payload 包含 role)
   const getRole = () => {
@@ -180,18 +179,11 @@ const CustomFlowChartEditor = () => {
   const [displayMode, setDisplayMode] = useState("flowchart");
   // 用來儲存每個 Phase 是否摺疊的狀態
   const [collapsedPhases, setCollapsedPhases] = useState({});
-  // 用於彈出式編輯視窗
-  const [editingPopupNode, setEditingPopupNode] = useState(null);
-  const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSavedNodes, setLastSavedNodes] = useState([]);
 
   // 讀取流程圖資料
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setIsSaving(true);
         const url = isTemplateMode
           ? `${API_URL}/templates/${realId}`
           : `${API_URL}/projects/${realId}/flowchart`;
@@ -212,12 +204,8 @@ const CustomFlowChartEditor = () => {
           showForCustomer: item.showForCustomer !== false
         }));
         setNodes(mapped);
-        setLastSavedNodes(mapped);
-        setHasUnsavedChanges(false);
       } catch (error) {
         console.error("Failed to load flowchart:", error);
-      } finally {
-        setIsSaving(false);
       }
     };
     fetchData();
@@ -229,52 +217,11 @@ const CustomFlowChartEditor = () => {
   const handleEditChange = (e) => {
     if (!selectedNodeId) return;
     const { name, value } = e.target;
-    
-    // 更新顯示設定時，同時更新所有子元素
-    if (name === "showInFlowchart" || name === "showForCustomer") {
-      setNodes(prevNodes => {
-        // 找出要更新的節點
-        const targetNode = prevNodes.find(n => n.id === selectedNodeId);
-        if (!targetNode) return prevNodes;
-        
-        // 如果是phase，recursively 找出所有子元素
-        const findAllChildren = (parentId) => {
-          const directChildren = prevNodes.filter(n => n.containerId === parentId);
-          let allChildren = [...directChildren];
-          
-          directChildren.forEach(child => {
-            if (child.type === "phase" || child.type === "task") {
-              allChildren = [...allChildren, ...findAllChildren(child.id)];
-            }
-          });
-          
-          return allChildren;
-        };
-        
-        const childrenIds = targetNode.type === "phase" ? 
-          findAllChildren(selectedNodeId).map(child => child.id) : [];
-        
-        // 更新目標節點和所有子節點
-        const newNodes = prevNodes.map(n => {
-          if (n.id === selectedNodeId || childrenIds.includes(n.id)) {
-            return { ...n, [name]: value };
-          }
-          return n;
-        });
-        
-        setHasUnsavedChanges(true);
-        return newNodes;
-      });
-    } else {
-      // 其他欄位只更新單一節點
-      setNodes(prevNodes => {
-        const newNodes = prevNodes.map(n =>
-          n.id === selectedNodeId ? { ...n, [name]: value } : n
-        );
-        setHasUnsavedChanges(true);
-        return newNodes;
-      });
-    }
+    setNodes(prevNodes =>
+      prevNodes.map(n =>
+        n.id === selectedNodeId ? { ...n, [name]: value } : n
+      )
+    );
   };
 
 // 新增箭頭控制點
@@ -465,7 +412,7 @@ const handleDeleteControlPoint = (nodeId, pointIndex) => {
           }
         }
         
-        const updatedNodes = prevNodes.map(n => {
+        return prevNodes.map(n => {
           if (n.id === draggingNodeId) {
             return { ...n, containerId: newContainerId };
           }
@@ -482,20 +429,11 @@ const handleDeleteControlPoint = (nodeId, pointIndex) => {
           }
           return n;
         });
-        
-        setHasUnsavedChanges(true);
-        // 觸發下一個渲染週期後執行自動儲存
-        setTimeout(() => autoSave(), 0);
-        
-        return updatedNodes;
       });
       setDraggingNodeId(null);
     }
     if (resizingNodeId) {
       setResizingNodeId(null);
-      // 縮放完成後自動儲存
-      setHasUnsavedChanges(true);
-      setTimeout(() => autoSave(), 0);
     }
   };
 
@@ -503,49 +441,6 @@ const handleDeleteControlPoint = (nodeId, pointIndex) => {
   const handleSelectNode = (e, nodeId) => {
     e.stopPropagation();
     setSelectedNodeId(nodeId);
-  };
-  
-  // 雙擊節點打開編輯彈窗
-  const handleDoubleClick = (e, nodeId) => {
-    if (isReadOnly) return;
-    e.stopPropagation();
-    
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node) return;
-    
-    // 計算彈窗位置 - 位於節點右側
-    const rect = e.currentTarget.getBoundingClientRect();
-    const containerRect = containerRef.current.getBoundingClientRect();
-    
-    // 先進行一次自動儲存 (如果有未儲存的變更)
-    if (hasUnsavedChanges && !isSaving) {
-      autoSave();
-    }
-    
-    setEditingPopupNode(node);
-    setPopupPosition({
-      x: rect.right - containerRect.left + 10, // 節點右側偏移10px
-      y: rect.top - containerRect.top
-    });
-  };
-  
-  // 關閉彈窗
-  const closePopup = () => {
-    if (hasUnsavedChanges && !isSaving) {
-      if (window.confirm('您尚未儲存變更，確定要關閉編輯視窗嗎？')) {
-        setEditingPopupNode(null);
-      }
-    } else {
-      setEditingPopupNode(null);
-    }
-  };
-  
-  // 點擊容器時關閉彈窗
-  const handleContainerClick = (e) => {
-    // 檢查點擊是否發生在彈窗內部
-    if (popupRef.current && !popupRef.current.contains(e.target)) {
-      closePopup();
-    }
   };
 
   // 開始縮放
@@ -561,6 +456,56 @@ const handleDeleteControlPoint = (nodeId, pointIndex) => {
       width: selectedNode.size.width,
       height: selectedNode.size.height
     });
+  };
+
+  // 刪除節點（唯讀模式不可操作）
+  const handleDeleteNode = () => {
+    if (isReadOnly || !selectedNodeId) return;
+    setNodes(prevNodes =>
+      prevNodes.filter(n => n.id !== selectedNodeId)
+        .map(n => n.containerId === selectedNodeId ? { ...n, containerId: null } : n)
+    );
+    setSelectedNodeId(null);
+  };
+
+  // 新增節點（唯讀模式不可操作）
+  const handleAddNewNode = (type = "task") => {
+    if (isReadOnly) return;
+    let newNode = null;
+    // 新增節點函數中的箭頭部分
+if (type === "arrow") {
+  // 預設箭頭的寬高與控制點（points 為相對於箭頭區塊的座標）
+  newNode = {
+    id: `arrow_${Date.now()}`,
+    type: "arrow",
+    label: "Arrow",
+    points: [
+      { x: 10, y: NODE_HEIGHT_DEFAULT / 2 },
+      { x: NODE_WIDTH_DEFAULT - 10, y: NODE_HEIGHT_DEFAULT / 2 }
+    ],
+    position: { x: 100, y: 100 },
+    size: { width: NODE_WIDTH_DEFAULT, height: NODE_HEIGHT_DEFAULT },
+    showInFlowchart: true
+  };
+
+    } else {
+      newNode = {
+        id: `${Date.now()}`,
+        type,
+        label: type === "phase" ? "New Phase" : "New Node",
+        description: "",
+        link: "",
+        extras: [],
+        children: [],
+        containerId: null,
+        position: { x: 50, y: 50 },
+        size: { width: NODE_WIDTH_DEFAULT, height: NODE_HEIGHT_DEFAULT },
+        status: (type === "phase" || type === "task") ? "未開始" : "",
+        shape: (type === "phase" || type === "task") ? "rectangle" : "",
+        showInFlowchart: true
+      };
+    }
+    setNodes(prev => [...prev, newNode]);
   };
 
 // 2. 新增狀態用於拖曳箭頭的控制點
@@ -635,148 +580,24 @@ useEffect(() => {
 }, [draggingControlPoint]);
 
 
-  // 刪除節點（唯讀模式不可操作）
-  const handleDeleteNode = () => {
-    if (isReadOnly || !selectedNodeId) return;
-    setNodes(prevNodes => {
-      const updatedNodes = prevNodes.filter(n => n.id !== selectedNodeId)
-        .map(n => n.containerId === selectedNodeId ? { ...n, containerId: null } : n);
-      
-      setHasUnsavedChanges(true);
-      setTimeout(() => autoSave(), 0);
-      return updatedNodes;
-    });
-    setSelectedNodeId(null);
-  };
 
-  // 新增節點（唯讀模式不可操作）
-  const handleAddNewNode = (type = "task") => {
-    if (isReadOnly) return;
-    let newNode = null;
-    // 新增節點函數中的箭頭部分
-    if (type === "arrow") {
-      // 預設箭頭的寬高與控制點（points 為相對於箭頭區塊的座標）
-      newNode = {
-        id: `arrow_${Date.now()}`,
-        type: "arrow",
-        label: "Arrow",
-        points: [
-          { x: 10, y: NODE_HEIGHT_DEFAULT / 2 },
-          { x: NODE_WIDTH_DEFAULT - 10, y: NODE_HEIGHT_DEFAULT / 2 }
-        ],
-        position: { x: 100, y: 100 },
-        size: { width: NODE_WIDTH_DEFAULT, height: NODE_HEIGHT_DEFAULT },
-        showInFlowchart: true
-      };
-    } else {
-      newNode = {
-        id: `${Date.now()}`,
-        type,
-        label: type === "phase" ? "新階段" : "新節點",
-        description: "",
-        link: "",
-        extras: [],
-        children: [],
-        containerId: null,
-        position: { x: 50, y: 50 },
-        size: { width: NODE_WIDTH_DEFAULT, height: NODE_HEIGHT_DEFAULT },
-        status: (type === "phase" || type === "task") ? "未開始" : "",
-        shape: (type === "phase" || type === "task") ? "rectangle" : "",
-        showInFlowchart: true
-      };
-    }
-    setNodes(prev => {
-      setHasUnsavedChanges(true);
-      setTimeout(() => autoSave(), 0);
-      return [...prev, newNode];
-    });
-  };
-
-  // 自動儲存流程圖
-  const autoSave = async () => {
-    if (isReadOnly || !hasUnsavedChanges || isSaving) return;
-    
-    try {
-      setIsSaving(true);
-      const url = isTemplateMode
-        ? `${API_URL}/templates/${realId}`
-        : `${API_URL}/projects/${realId}/flowchart`;
-      
-      await axios.put(url,
-        { flowChart: nodes },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      setHasUnsavedChanges(false);
-      setLastSavedNodes(nodes);
-      console.log("自動儲存成功");
-    } catch (error) {
-      console.error("自動儲存失敗:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-  
-  // 手動儲存流程圖（唯讀模式不可操作）
+  // 儲存流程圖（唯讀模式不可操作）
   const handleSave = async () => {
-    if (isReadOnly || !hasUnsavedChanges || isSaving) return;
-    
+    if (isReadOnly) return;
     try {
-      setIsSaving(true);
       const url = isTemplateMode
         ? `${API_URL}/templates/${realId}`
         : `${API_URL}/projects/${realId}/flowchart`;
-      
       await axios.put(url,
         { flowChart: nodes },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
-      setHasUnsavedChanges(false);
-      setLastSavedNodes(nodes);
+      alert("Flowchart saved successfully!");
     } catch (error) {
-      console.error("儲存失敗:", error);
-      alert("儲存失敗，請重試。");
-    } finally {
-      setIsSaving(false);
+      console.error("Failed to save flowchart:", error);
+      alert("Save failed.");
     }
   };
-  // 定時自動儲存
-  useEffect(() => {
-    const saveInterval = setInterval(() => {
-      autoSave();
-    }, 30000); // 每30秒自動儲存一次
-    
-    return () => clearInterval(saveInterval);
-  }, [nodes, hasUnsavedChanges, isSaving]);
-  
-  // 監控節點變動
-  useEffect(() => {
-    if (JSON.stringify(nodes) !== JSON.stringify(lastSavedNodes)) {
-      setHasUnsavedChanges(true);
-    }
-  }, [nodes]);
-  
-  // 離開前警告
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (hasUnsavedChanges) {
-        const message = '您尚未儲存變更，確定要離開嗎？';
-        e.returnValue = message;
-        return message;
-      }
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      // 在組件卸載前自動儲存
-      if (hasUnsavedChanges && !isSaving) {
-        autoSave();
-      }
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [hasUnsavedChanges, isSaving]);
-  
   useEffect(() => {
     const handleKeyDown = (e) => {
       // 如果焦點在 input 或 textarea 中，則不處理快捷鍵
@@ -790,11 +611,11 @@ useEffect(() => {
         e.preventDefault();
         handleDeleteNode();
       }
-      // Delete 鍵刪除選中的節點
-      if (e.key === "Backspace") {
-        e.preventDefault();
-        handleDeleteNode();
-      }
+  // Delete 鍵刪除選中的節點
+  if (e.key === "Backspace") {
+    e.preventDefault();
+    handleDeleteNode();
+  }
       // Ctrl+S 或 Cmd+S 儲存流程圖
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
@@ -849,33 +670,29 @@ const renderHeader = () => (
     {!isReadOnly && (
       <>
         <button onClick={() => setDisplayMode("flowchart")} className={`yuniver-btn ${displayMode === "flowchart" ? "" : "secondary"} yuniver-filter-btn`}>
-          流程圖視圖
+          Flowchart View
         </button>
         <button onClick={() => setDisplayMode("list")} className={`yuniver-btn ${displayMode === "list" ? "" : "secondary"} yuniver-filter-btn`}>
-          列表視圖
+          List View
         </button>
         <button onClick={() => handleAddNewNode("task")} className="yuniver-btn secondary yuniver-filter-btn">
-          新增任務
+          Add Task
         </button>
         <button onClick={() => handleAddNewNode("phase")} className="yuniver-btn secondary yuniver-filter-btn">
-          新增階段
+          Add Phase
         </button>
         <button onClick={() => handleAddNewNode("arrow")} className="yuniver-btn secondary yuniver-filter-btn">
-          新增箭頭
+          Add Arrow
         </button>
-        <button 
-          onClick={handleSave} 
-          className={`yuniver-btn yuniver-filter-btn ${!hasUnsavedChanges ? 'disabled' : ''}`}
-          disabled={isSaving || !hasUnsavedChanges}
-        >
-          {isSaving ? '儲存中...' : (hasUnsavedChanges ? '儲存流程圖' : '已儲存')}
+        <button onClick={handleSave} className="yuniver-btn yuniver-filter-btn">
+          Save Flow Chart
         </button>
         <button onClick={handleDownloadFlowchart} className="yuniver-btn secondary yuniver-filter-btn">
-          下載流程圖
+          Download Flowchart
         </button>
         <div className="flowchart-import">
           <label className="yuniver-btn secondary">
-            匯入流程圖
+            Import Flowchart
             <input type="file" accept=".json" onChange={handleUploadFlowchart} style={{ display: "none" }} />
           </label>
         </div>
@@ -886,30 +703,18 @@ const renderHeader = () => (
 // 移動 Phase：能處理巢狀 Phase 的排序
 const movePhase = (phaseId, direction) => {
   if (isReadOnly) return;
-  
   setNodes(prevNodes => {
     // 找到目標 Phase
     const targetPhase = prevNodes.find(n => n.id === phaseId);
     if (!targetPhase) return prevNodes;
     
     // 獲取同一層級的 Phase 節點（相同的父節點）
-    let siblingPhases = prevNodes.filter(n => 
+    const siblingPhases = prevNodes.filter(n => 
       n.type === "phase" && 
       String(n.containerId) === String(targetPhase.containerId)
     );
     
-    // 對同層級的 Phases 添加排序屬性（如果沒有）
-    siblingPhases = siblingPhases.map((phase, idx) => {
-      if (phase.sortOrder === undefined) {
-        return { ...phase, sortOrder: idx * 10 }; // 使用10的倍數方便插入
-      }
-      return phase;
-    });
-    
-    // 根據排序屬性排序
-    siblingPhases.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-    
-    // 找出目標 Phase 在排序後的陣列中的索引
+    // 找出目標 Phase 在同層級中的索引
     const index = siblingPhases.findIndex(p => p.id === phaseId);
     if (index === -1) return prevNodes;
     
@@ -919,102 +724,43 @@ const movePhase = (phaseId, direction) => {
     // 確保新索引在有效範圍內
     if (newIndex < 0 || newIndex >= siblingPhases.length) return prevNodes;
     
-    // 獲取要交換的兩個元素
-    const currentElement = siblingPhases[index];
-    const swapElement = siblingPhases[newIndex];
+    // 交換相同層級的兩個 Phase 的順序
+    [siblingPhases[index], siblingPhases[newIndex]] = [siblingPhases[newIndex], siblingPhases[index]];
     
-    // 交換排序值
-    const currentSortOrder = currentElement.sortOrder || index * 10;
-    const swapSortOrder = swapElement.sortOrder || newIndex * 10;
-    
-    // 使用交換後的排序值創建更新的節點陣列
-    const updatedNodes = prevNodes.map(node => {
-      if (node.id === currentElement.id) {
-        return { ...node, sortOrder: swapSortOrder };
-      } else if (node.id === swapElement.id) {
-        return { ...node, sortOrder: currentSortOrder };
+    // 構建新的 nodes 陣列
+    return prevNodes.map(node => {
+      // 如果是當前層級的 Phase，則從交換後的 siblingPhases 陣列中獲取
+      if (node.type === "phase" && String(node.containerId) === String(targetPhase.containerId)) {
+        const updatedNode = siblingPhases.find(p => p.id === node.id);
+        return updatedNode || node;
       }
+      // 其他節點保持不變
       return node;
     });
-    
-    // 設置未儲存狀態並自動儲存
-    setHasUnsavedChanges(true);
-    setTimeout(() => autoSave(), 0);
-    
-    return updatedNodes;
   });
 };
 
 // 移動 Task：僅針對屬於同一 Phase (containerId) 的 Task 進行交換
 const moveTask = (taskId, phaseId, direction) => {
   if (isReadOnly) return;
-  
   setNodes(prevNodes => {
-    // 找到目標 Task
-    const targetTask = prevNodes.find(n => n.id === taskId);
-    if (!targetTask) return prevNodes;
-    
-    // 獲取同一 Phase 下的所有 Task 節點
-    let siblingTasks = prevNodes.filter(n => 
-      n.type === "task" && 
-      String(n.containerId) === String(phaseId)
-    );
-    
-    // 對同一 Phase 下的 Tasks 添加排序屬性（如果沒有）
-    siblingTasks = siblingTasks.map((task, idx) => {
-      if (task.sortOrder === undefined) {
-        return { ...task, sortOrder: idx * 10 }; // 使用10的倍數方便插入
-      }
-      return task;
-    });
-    
-    // 根據排序屬性排序
-    siblingTasks.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-    
-    // 找出目標 Task 在排序後的陣列中的索引
-    const index = siblingTasks.findIndex(t => t.id === taskId);
+    // 分離出屬於該 Phase 的 Task 與其他節點
+    const tasks = prevNodes.filter(n => n.type === "task" && String(n.containerId) === String(phaseId));
+    const others = prevNodes.filter(n => !(n.type === "task" && String(n.containerId) === String(phaseId)));
+    const index = tasks.findIndex(t => t.id === taskId);
     if (index === -1) return prevNodes;
-    
-    // 計算新索引
     const newIndex = index + (direction === "up" ? -1 : 1);
-    
-    // 確保新索引在有效範圍內
-    if (newIndex < 0 || newIndex >= siblingTasks.length) return prevNodes;
-    
-    // 獲取要交換的兩個元素
-    const currentElement = siblingTasks[index];
-    const swapElement = siblingTasks[newIndex];
-    
-    // 交換排序值
-    const currentSortOrder = currentElement.sortOrder || index * 10;
-    const swapSortOrder = swapElement.sortOrder || newIndex * 10;
-    
-    // 使用交換後的排序值創建更新的節點陣列
-    const updatedNodes = prevNodes.map(node => {
-      if (node.id === currentElement.id) {
-        return { ...node, sortOrder: swapSortOrder };
-      } else if (node.id === swapElement.id) {
-        return { ...node, sortOrder: currentSortOrder };
-      }
-      return node;
-    });
-    
-    // 設置未儲存狀態並自動儲存
-    setHasUnsavedChanges(true);
-    setTimeout(() => autoSave(), 0);
-    
-    return updatedNodes;
+    if (newIndex < 0 || newIndex >= tasks.length) return prevNodes;
+    [tasks[index], tasks[newIndex]] = [tasks[newIndex], tasks[index]];
+    // 回傳新的 nodes 陣列：簡單合併（此方式僅適用於該 Phase 下 Task 都是連續的情況）
+    return [...others, ...tasks];
   });
 };
 
   // 列表模式：以表格呈現 Phase 與 Task（唯讀模式下僅可查看與設定 Show in Flowchart）
   const renderListView = () => {
-    // 取出未指定 container 的 Phase 節點（頂層 Phase），並按照sortOrder排序
-    const topLevelPhases = [...nodes.filter(n => n.type === "phase" && !n.containerId)]
-      .sort((a, b) => {
-        // 優先使用排序屬性，如果不存在則使用id
-        return (a.sortOrder || 0) - (b.sortOrder || 0);
-      });
+    // 取出未指定 container 的 Phase 節點（頂層 Phase）
+    const topLevelPhases = nodes.filter(n => n.type === "phase" && !n.containerId);
     // 取出未指定 container 的 Task（單獨任務）
     const unassignedTasks = nodes.filter(n => n.type === "task" && !n.containerId);
     // 其他未分類的元素（非Phase, 非Task, 且無容器）
@@ -1026,45 +772,9 @@ const moveTask = (taskId, phaseId, direction) => {
     // 更新節點函式
     const updateNode = (nodeId, field, value) => {
       if (isReadOnly) return;
-      
-      // 更新顯示設定時，同時更新所有子元素
-      if (field === "showInFlowchart" || field === "showForCustomer") {
-        setNodes(prevNodes => {
-          // 找出要更新的節點
-          const targetNode = prevNodes.find(n => n.id === nodeId);
-          if (!targetNode) return prevNodes;
-          
-          // 如果是phase，recursively 找出所有子元素
-          const findAllChildren = (parentId) => {
-            const directChildren = prevNodes.filter(n => n.containerId === parentId);
-            let allChildren = [...directChildren];
-            
-            directChildren.forEach(child => {
-              if (child.type === "phase" || child.type === "task") {
-                allChildren = [...allChildren, ...findAllChildren(child.id)];
-              }
-            });
-            
-            return allChildren;
-          };
-          
-          const childrenIds = targetNode.type === "phase" ? 
-            findAllChildren(nodeId).map(child => child.id) : [];
-          
-          // 更新目標節點和所有子節點
-          return prevNodes.map(n => {
-            if (n.id === nodeId || childrenIds.includes(n.id)) {
-              return { ...n, [field]: value };
-            }
-            return n;
-          });
-        });
-      } else {
-        // 其他欄位只更新單一節點
-        setNodes(prevNodes =>
-          prevNodes.map(n => n.id === nodeId ? { ...n, [field]: value } : n)
-        );
-      }
+      setNodes(prevNodes =>
+        prevNodes.map(n => n.id === nodeId ? { ...n, [field]: value } : n)
+      );
     };
 
     // 遞迴渲染 Phase 及其子項目（可包含 Task 和 Phase）
@@ -1157,14 +867,14 @@ const moveTask = (taskId, phaseId, direction) => {
           {!collapsedPhases[phase.id] && (
             <>
               {/* 先渲染該 Phase 包含的子 Phase */}
-              {[...nodes.filter(n => n.type === "phase" && String(n.containerId) === String(phase.id))]
-                .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))  // 按照排序屬性排序
+              {nodes
+                .filter(n => n.type === "phase" && String(n.containerId) === String(phase.id))
                 .map(childPhase => renderPhaseWithChildren(childPhase, indentLevel + 1))
               }
               
               {/* 再渲染該 Phase 包含的 Task */}
-              {[...nodes.filter(n => n.type === "task" && String(n.containerId) === String(phase.id))]
-                .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))  // 按照排序屬性排序
+              {nodes
+                .filter(n => n.type === "task" && String(n.containerId) === String(phase.id))
                 .map(task => (
                   <tr key={task.id}>
                     <td style={{ paddingLeft: `${paddingLeft + 20}px` }}>Task</td>
@@ -1214,28 +924,12 @@ const moveTask = (taskId, phaseId, direction) => {
                       )}
                     </td>
                     <td>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                        <label style={{ display: "flex", alignItems: "center", fontSize: "12px" }}>
-                          <input
-                            type="checkbox"
-                            checked={task.showInFlowchart !== false}
-                            onChange={(e) => updateNode(task.id, "showInFlowchart", e.target.checked)}
-                            disabled={isReadOnly}
-                            style={{ marginRight: "5px" }}
-                          />
-                          流程圖
-                        </label>
-                        <label style={{ display: "flex", alignItems: "center", fontSize: "12px" }}>
-                          <input
-                            type="checkbox"
-                            checked={task.showForCustomer !== false}
-                            onChange={(e) => updateNode(task.id, "showForCustomer", e.target.checked)}
-                            disabled={isReadOnly}
-                            style={{ marginRight: "5px" }}
-                          />
-                          顧客可見
-                        </label>
-                      </div>
+                      <input
+                        type="checkbox"
+                        checked={task.showInFlowchart !== false}
+                        onChange={(e) => updateNode(task.id, "showInFlowchart", e.target.checked)}
+                        disabled={isReadOnly}
+                      />
                     </td>
                   </tr>
                 ))
@@ -1288,28 +982,12 @@ const moveTask = (taskId, phaseId, direction) => {
                       {/* 其他元素暫無排序功能 */}
                     </td>
                     <td>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                        <label style={{ display: "flex", alignItems: "center", fontSize: "12px" }}>
-                          <input
-                            type="checkbox"
-                            checked={otherNode.showInFlowchart !== false}
-                            onChange={(e) => updateNode(otherNode.id, "showInFlowchart", e.target.checked)}
-                            disabled={isReadOnly}
-                            style={{ marginRight: "5px" }}
-                          />
-                          流程圖
-                        </label>
-                        <label style={{ display: "flex", alignItems: "center", fontSize: "12px" }}>
-                          <input
-                            type="checkbox"
-                            checked={otherNode.showForCustomer !== false}
-                            onChange={(e) => updateNode(otherNode.id, "showForCustomer", e.target.checked)}
-                            disabled={isReadOnly}
-                            style={{ marginRight: "5px" }}
-                          />
-                          顧客可見
-                        </label>
-                      </div>
+                      <input
+                        type="checkbox"
+                        checked={otherNode.showInFlowchart !== false}
+                        onChange={(e) => updateNode(otherNode.id, "showInFlowchart", e.target.checked)}
+                        disabled={isReadOnly}
+                      />
                     </td>
                   </tr>
                 ))
@@ -1391,28 +1069,12 @@ const moveTask = (taskId, phaseId, direction) => {
                       {/* 未分配的 Task 暫無排序功能 */}
                     </td>
                     <td>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                        <label style={{ display: "flex", alignItems: "center", fontSize: "12px" }}>
-                          <input
-                            type="checkbox"
-                            checked={task.showInFlowchart !== false}
-                            onChange={(e) => updateNode(task.id, "showInFlowchart", e.target.checked)}
-                            disabled={isReadOnly}
-                            style={{ marginRight: "5px" }}
-                          />
-                          流程圖
-                        </label>
-                        <label style={{ display: "flex", alignItems: "center", fontSize: "12px" }}>
-                          <input
-                            type="checkbox"
-                            checked={task.showForCustomer !== false}
-                            onChange={(e) => updateNode(task.id, "showForCustomer", e.target.checked)}
-                            disabled={isReadOnly}
-                            style={{ marginRight: "5px" }}
-                          />
-                          顧客可見
-                        </label>
-                      </div>
+                      <input
+                        type="checkbox"
+                        checked={task.showInFlowchart !== false}
+                        onChange={(e) => updateNode(task.id, "showInFlowchart", e.target.checked)}
+                        disabled={isReadOnly}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -1455,7 +1117,7 @@ const moveTask = (taskId, phaseId, direction) => {
                       />
                     </td>
                     <td>
-                      {node.status !== undefined ? (
+                      {node.status ? (
                         <input
                           type="text"
                           value={node.status || ""}
@@ -1468,28 +1130,12 @@ const moveTask = (taskId, phaseId, direction) => {
                       {/* 其他元素暫無排序功能 */}
                     </td>
                     <td>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                        <label style={{ display: "flex", alignItems: "center", fontSize: "12px" }}>
-                          <input
-                            type="checkbox"
-                            checked={node.showInFlowchart !== false}
-                            onChange={(e) => updateNode(node.id, "showInFlowchart", e.target.checked)}
-                            disabled={isReadOnly}
-                            style={{ marginRight: "5px" }}
-                          />
-                          流程圖
-                        </label>
-                        <label style={{ display: "flex", alignItems: "center", fontSize: "12px" }}>
-                          <input
-                            type="checkbox"
-                            checked={node.showForCustomer !== false}
-                            onChange={(e) => updateNode(node.id, "showForCustomer", e.target.checked)}
-                            disabled={isReadOnly}
-                            style={{ marginRight: "5px" }}
-                          />
-                          顧客可見
-                        </label>
-                      </div>
+                      <input
+                        type="checkbox"
+                        checked={node.showInFlowchart !== false}
+                        onChange={(e) => updateNode(node.id, "showInFlowchart", e.target.checked)}
+                        disabled={isReadOnly}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -1501,33 +1147,114 @@ const moveTask = (taskId, phaseId, direction) => {
     );
   };
 
-  // 流程圖模式：只顯示 showInFlowchart 為 true 的節點，且客戶角色需考慮 showForCustomer 條件
-  const renderFlowchartView = () => {
-    // 篩選節點：考慮 showInFlowchart 和客戶角色下的 showForCustomer
-    const visibleNodes = nodes.filter(node => {
-      if (node.showInFlowchart === false) return false;
-      if (isReadOnly && node.showForCustomer === false) return false;
-      return true;
-    });
+  // 流程圖模式：只顯示 showInFlowchart 為 true 的節點
+  const renderFlowchartView = () => (
+    <div
+      ref={containerRef}
+      className="yuniver-flowchart-view"
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "600px",
+        border: "1px solid #e0e0e0",
+        backgroundColor: "#fafafa"
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
+{nodes
+  .filter(node => node.showInFlowchart !== false)
+  .map(node => {
+    if (node.type === "arrow") {
+      return (
+        <div
+          key={node.id}
+          style={{
+            position: "absolute",
+            left: node.position.x,
+            top: node.position.y,
+            width: node.size.width,
+            height: node.size.height,
+            border: selectedNodeId === node.id ? "2px dashed red" : "0px dashed #999",
+            backgroundColor: "transparent",
+            cursor: isReadOnly ? "default" : "move",
+            zIndex: 1
+          }}
+          onMouseDown={(e) => handleMouseDown(e, node.id)}
+          onClick={(e) => handleSelectNode(e, node.id)}
+        >
+          {renderArrow(node)}
+          
+          {/* 控制點 - 僅在選中狀態且非唯讀模式時顯示 */}
+          {!isReadOnly && selectedNodeId === node.id && node.points.map((point, index) => (
+            <div
+              key={`point-${index}`}
+              style={{
+                position: "absolute",
+                left: point.x - 4,
+                top: point.y - 4,
+                width: 8,
+                height: 8,
+                backgroundColor: "blue",
+                border: "1px solid white",
+                borderRadius: "50%",
+                cursor: "pointer",
+                zIndex: 20
+              }}
+              onMouseDown={(e) => handleControlPointMouseDown(e, node.id, index)}
+            />
+          ))}
+          
+          {/* 新增控制點按鈕 - 僅在選中狀態且非唯讀模式時顯示 */}
+          {!isReadOnly && selectedNodeId === node.id && (
+            <button
+              style={{
+                position: "absolute",
+                right: 0,
+                top: -25,
+                fontSize: "10px",
+                padding: "2px 5px"
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddControlPoint(node.id);
+              }}
+            >
+              + Point
+            </button>
+          )}
+          
+          {/* 縮放控制點 */}
+          {!isReadOnly && selectedNodeId === node.id && (
+            <div
+              style={{
+                position: "absolute",
+                right: 0,
+                bottom: 0,
+                width: RESIZE_HANDLE_SIZE,
+                height: RESIZE_HANDLE_SIZE,
+                backgroundColor: "gray",
+                cursor: "se-resize"
+              }}
+              onMouseDown={(e) => handleResizeMouseDown(e, node.id)}
+            />
+          )}
+        </div>
+      );
+    }
     
-    return (
-      <div
-        ref={containerRef}
-        className="yuniver-flowchart-view"
-        style={{
-          position: "relative",
-          width: "100%",
-          height: "600px",
-          border: "1px solid #e0e0e0",
-          backgroundColor: "#fafafa",
-          overflow: "auto"  // 允許滾動查看超出範圍的物件
-        }}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onClick={handleContainerClick}
-      >
-{visibleNodes.map(node => {
-  if (node.type === "arrow") {
+    // 現有的非箭頭節點渲染代碼...
+    // 計算 z-index: 根據節點的巢狀層級來設定，越深層的節點 z-index 越高
+    const getNodeDepth = (nodeId, depth = 0) => {
+      const node = nodes.find(n => n.id === nodeId);
+      if (!node || !node.containerId) return depth;
+      return getNodeDepth(node.containerId, depth + 1);
+    };
+    
+    // 計算正確的 z-index: phase 比 task 高，同時考慮巢狀深度
+    const nodeDepth = getNodeDepth(node.id);
+    const baseZIndex = node.type === "phase" ? 100 : (node.type === "task" ? 50 : 10);
+    const zIndex = baseZIndex + nodeDepth * 10;
     return (
       <div
         key={node.id}
@@ -1537,56 +1264,20 @@ const moveTask = (taskId, phaseId, direction) => {
           top: node.position.y,
           width: node.size.width,
           height: node.size.height,
-          border: selectedNodeId === node.id ? "2px dashed red" : "0px dashed #999",
-          backgroundColor: "transparent",
+          border: selectedNodeId === node.id ? "2px solid red" : "1px solid #333",
+          boxSizing: "border-box",
+          backgroundColor:
+            (node.type === "phase" || node.type === "task")
+              ? getStatusColor(node)
+              : "#fff",
           cursor: isReadOnly ? "default" : "move",
-          zIndex: 1
+          zIndex,
+          ...getShapeStyle(node.shape)
         }}
         onMouseDown={(e) => handleMouseDown(e, node.id)}
         onClick={(e) => handleSelectNode(e, node.id)}
       >
-        {renderArrow(node)}
-        
-        {/* 控制點 - 僅在選中狀態且非唯讀模式時顯示 */}
-        {!isReadOnly && selectedNodeId === node.id && node.points.map((point, index) => (
-          <div
-            key={`point-${index}`}
-            style={{
-              position: "absolute",
-              left: point.x - 4,
-              top: point.y - 4,
-              width: 8,
-              height: 8,
-              backgroundColor: "blue",
-              border: "1px solid white",
-              borderRadius: "50%",
-              cursor: "pointer",
-              zIndex: 20
-            }}
-            onMouseDown={(e) => handleControlPointMouseDown(e, node.id, index)}
-          />
-        ))}
-        
-        {/* 新增控制點按鈕 - 僅在選中狀態且非唯讀模式時顯示 */}
-        {!isReadOnly && selectedNodeId === node.id && (
-          <button
-            style={{
-              position: "absolute",
-              right: 0,
-              top: -25,
-              fontSize: "10px",
-              padding: "2px 5px"
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleAddControlPoint(node.id);
-            }}
-          >
-            + Point
-          </button>
-        )}
-        
-        {/* 縮放控制點 */}
+        {renderNodeContent(node)}
         {!isReadOnly && selectedNodeId === node.id && (
           <div
             style={{
@@ -1603,65 +1294,9 @@ const moveTask = (taskId, phaseId, direction) => {
         )}
       </div>
     );
-  }
-  
-  // 現有的非箭頭節點渲染代碼...
-  // 計算 z-index: 根據節點的巢狀層級來設定，越深層的節點 z-index 越高
-  const getNodeDepth = (nodeId, depth = 0) => {
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node || !node.containerId) return depth;
-    return getNodeDepth(node.containerId, depth + 1);
-  };
-  
-  // 計算正確的 z-index: phase 比 task 低，同時考慮巢狀深度
-  // 反向思考：子元素需要比父元素更高的z-index才能顯示在上層
-  const nodeDepth = getNodeDepth(node.id);
-  const baseZIndex = node.type === "phase" ? 10 : (node.type === "task" ? 50 : 100);
-  const zIndex = baseZIndex + nodeDepth * 10;
-  return (
-    <div
-      key={node.id}
-      style={{
-        position: "absolute",
-        left: node.position.x,
-        top: node.position.y,
-        width: node.size.width,
-        height: node.size.height,
-        border: selectedNodeId === node.id ? "2px solid red" : "1px solid #333",
-        boxSizing: "border-box",
-        backgroundColor:
-          (node.type === "phase" || node.type === "task")
-            ? getStatusColor(node)
-            : "#fff",
-        cursor: isReadOnly ? "default" : "move",
-        zIndex,
-        ...getShapeStyle(node.shape)
-      }}
-      onMouseDown={(e) => handleMouseDown(e, node.id)}
-      onClick={(e) => handleSelectNode(e, node.id)}
-      onDoubleClick={(e) => handleDoubleClick(e, node.id)}
-    >
-      {renderNodeContent(node)}
-      {!isReadOnly && selectedNodeId === node.id && (
-        <div
-          style={{
-            position: "absolute",
-            right: 0,
-            bottom: 0,
-            width: RESIZE_HANDLE_SIZE,
-            height: RESIZE_HANDLE_SIZE,
-            backgroundColor: "gray",
-            cursor: "se-resize"
-          }}
-          onMouseDown={(e) => handleResizeMouseDown(e, node.id)}
-        />
-      )}
+  })}
     </div>
   );
-})}
-      </div>
-    );
-  };
 
   return (
     <div className="yuniver-container">
@@ -1681,266 +1316,118 @@ const moveTask = (taskId, phaseId, direction) => {
             
             <div className="yuniver-flowchart-content">
               {displayMode === "flowchart" ? renderFlowchartView() : renderListView()}
+            </div>
+          </div>
+          
+          {!isReadOnly && selectedNode && (
+            <div className="yuniver-flowchart-container">
+              <div className="yuniver-flowchart-header">
+                <h3 className="yuniver-flowchart-title">Edit Node Properties</h3>
+              </div>
               
-              {/* 編輯彈窗 */}
-              {editingPopupNode && (
-                <div 
-                  ref={popupRef}
-                  className="node-edit-popup"
-                  style={{ left: `${popupPosition.x}px`, top: `${popupPosition.y}px` }}
-                >
-                  <div className="popup-header">
-                    <h3>編輯 {editingPopupNode.type}</h3>
-                    <button onClick={closePopup} className="popup-close-btn">✖</button>
+              <div className="yuniver-flowchart-content">
+                <div className="yuniver-node yuniver-node-properties">
+                  <div>
+                    <label>Type:</label>
+                    <select name="type" value={selectedNode.type} onChange={handleEditChange} className="form-control">
+                      <option value="phase">phase</option>
+                      <option value="task">task</option>
+                      <option value="subFlow">subFlow</option>
+                      <option value="iterative">iterative</option>
+                      <option value="note">note</option>
+                      <option value="extra">extra</option>
+                    </select>
                   </div>
-                  
-                  <div className="popup-field">
-                    <label>標籤：</label>
-                    <input
-                      type="text"
-                      name="label"
-                      value={editingPopupNode.label || ''}
-                      onChange={(e) => {
-                        const { name, value } = e.target;
-                        setEditingPopupNode(prev => ({ ...prev, [name]: value }));
-                        setNodes(prevNodes => {
-                          const newNodes = prevNodes.map(n => 
-                            n.id === editingPopupNode.id ? { ...n, [name]: value } : n
-                          );
-                          setHasUnsavedChanges(true);
-                          return newNodes;
-                        });
-                        autoSave();
-                      }}
-                    />
+                  <div>
+                    <label>Label:</label>
+                    <input name="label" value={selectedNode.label} onChange={handleEditChange} className="form-control" />
                   </div>
-                  
-                  <div className="popup-field">
-                    <label>描述：</label>
-                    <textarea
-                      name="description"
-                      value={editingPopupNode.description || ''}
-                      onChange={(e) => {
-                        const { name, value } = e.target;
-                        setEditingPopupNode(prev => ({ ...prev, [name]: value }));
-                        setNodes(prevNodes => {
-                          const newNodes = prevNodes.map(n => 
-                            n.id === editingPopupNode.id ? { ...n, [name]: value } : n
-                          );
-                          setHasUnsavedChanges(true);
-                          return newNodes;
-                        });
-                        autoSave();
-                      }}
-                    />
+                  <div>
+                    <label>Description:</label>
+                    <textarea name="description" value={selectedNode.description} onChange={handleEditChange} className="form-control" />
                   </div>
-                  
-                  {(editingPopupNode.type === 'phase' || editingPopupNode.type === 'task') && (
-                    <div className="popup-field">
-                      <label>狀態：</label>
-                      <select
-                        name="status"
-                        value={editingPopupNode.status || '未開始'}
-                        onChange={(e) => {
-                          const { name, value } = e.target;
-                          setEditingPopupNode(prev => ({ ...prev, [name]: value }));
-                          setNodes(prevNodes => {
-                            const newNodes = prevNodes.map(n => 
-                              n.id === editingPopupNode.id ? { ...n, [name]: value } : n
-                            );
-                            setHasUnsavedChanges(true);
-                            return newNodes;
-                          });
-                          autoSave();
-                        }}
-                      >
+                  <div>
+                    <label>Link:</label>
+                    <input name="link" value={selectedNode.link} onChange={handleEditChange} className="form-control" />
+                  </div>
+                  {(selectedNode.type === "phase" || selectedNode.type === "task") && (
+                    <div>
+                      <label>Status:</label>
+                      <select name="status" value={selectedNode.status} onChange={handleEditChange} className="form-control">
                         <option value="未開始">未開始</option>
                         <option value="規劃中">規劃中</option>
                         <option value="進行中">進行中</option>
                         <option value="已完成">已完成</option>
                         <option value="自訂">自訂</option>
                       </select>
+                      {selectedNode.status === "自訂" && (
+                        <div>
+                          <label>Custom Status:</label>
+                          <input name="customStatus" value={selectedNode.customStatus || ""} onChange={handleEditChange} className="form-control" />
+                        </div>
+                      )}
+                      <div>
+                        <label>Shape:</label>
+                        <select name="shape" value={selectedNode.shape} onChange={handleEditChange} className="form-control">
+                          <option value="rectangle">矩形</option>
+                          <option value="ellipse">橢圓 / 藥丸</option>
+                          <option value="parallelogram">平行四邊形</option>
+                          <option value="diamond">菱形</option>
+                        </select>
+                      </div>
                     </div>
                   )}
-                  
-                  {editingPopupNode.status === '自訂' && (
-                    <div className="popup-field">
-                      <label>自訂狀態：</label>
-                      <input
-                        type="text"
-                        name="customStatus"
-                        value={editingPopupNode.customStatus || ''}
-                        onChange={(e) => {
-                          const { name, value } = e.target;
-                          setEditingPopupNode(prev => ({ ...prev, [name]: value }));
-                          setNodes(prevNodes => {
-                            const newNodes = prevNodes.map(n => 
-                              n.id === editingPopupNode.id ? { ...n, [name]: value } : n
-                            );
-                            setHasUnsavedChanges(true);
-                            return newNodes;
-                          });
-                          autoSave();
-                        }}
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="popup-field">
-                    <label>連結：</label>
+                  <div>
+                    <label>Children (comma-separated IDs):</label>
                     <input
-                      type="text"
-                      name="link"
-                      value={editingPopupNode.link || ''}
-                      onChange={(e) => {
-                        const { name, value } = e.target;
-                        setEditingPopupNode(prev => ({ ...prev, [name]: value }));
-                        setNodes(prevNodes => {
-                          const newNodes = prevNodes.map(n => 
-                            n.id === editingPopupNode.id ? { ...n, [name]: value } : n
-                          );
-                          setHasUnsavedChanges(true);
-                          return newNodes;
-                        });
-                        autoSave();
-                      }}
+                      value={(selectedNode.children || []).join(",")}
+                      onChange={handleChildrenChange}
+                      className="form-control"
                     />
                   </div>
-                  
-                  {(editingPopupNode.type === 'phase' || editingPopupNode.type === 'task') && (
-                    <div className="popup-field">
-                      <label>形狀：</label>
-                      <select
-                        name="shape"
-                        value={editingPopupNode.shape || 'rectangle'}
-                        onChange={(e) => {
-                          const { name, value } = e.target;
-                          setEditingPopupNode(prev => ({ ...prev, [name]: value }));
-                          setNodes(prevNodes => {
-                            const newNodes = prevNodes.map(n => 
-                              n.id === editingPopupNode.id ? { ...n, [name]: value } : n
-                            );
-                            setHasUnsavedChanges(true);
-                            return newNodes;
-                          });
-                          autoSave();
-                        }}
-                      >
-                        <option value="rectangle">矩形</option>
-                        <option value="ellipse">橢圓形</option>
-                        <option value="parallelogram">平行四邊形</option>
-                        <option value="diamond">菱形</option>
-                      </select>
-                    </div>
-                  )}
-                  
-                  {editingPopupNode.type === 'task' && (
-                    <div className="popup-field popup-checkbox">
-                      <label>
-                        <input
-                          type="checkbox"
-                          name="important"
-                          checked={editingPopupNode.important || false}
-                          onChange={(e) => {
-                            const { name, checked } = e.target;
-                            setEditingPopupNode(prev => ({ ...prev, [name]: checked }));
-                            setNodes(prevNodes => {
-                              const newNodes = prevNodes.map(n => 
-                                n.id === editingPopupNode.id ? { ...n, [name]: checked } : n
-                              );
-                              setHasUnsavedChanges(true);
-                              return newNodes;
-                            });
-                            autoSave();
-                          }}
-                        />
-                        重要任務
-                      </label>
-                    </div>
-                  )}
-                  
-                  <div className="popup-field">
-                    <div className="popup-checkbox-group">
-                      <label>
-                        <input
-                          type="checkbox"
-                          name="showInFlowchart"
-                          checked={editingPopupNode.showInFlowchart !== false}
-                          onChange={(e) => {
-                            const { name, checked } = e.target;
-                            // 更新當前節點狀態
-                            setEditingPopupNode(prev => ({ ...prev, [name]: checked }));
-                            
-                            // 更新所有節點，包括級聯更新子元素
-                            if (editingPopupNode.type === "phase") {
-                              // 使用現有的 handleEditChange 函數來級聯更新子元素
-                              const event = { target: { name, value: checked } };
-                              setSelectedNodeId(editingPopupNode.id);
-                              handleEditChange(event);
-                            } else {
-                              // 非 phase 節點只更新自己
-                              setNodes(prevNodes => {
-                                const newNodes = prevNodes.map(n => 
-                                  n.id === editingPopupNode.id ? { ...n, [name]: checked } : n
-                                );
-                                setHasUnsavedChanges(true);
-                                return newNodes;
-                              });
-                            }
-                            autoSave();
-                          }}
-                        />
-                        在流程圖中顯示
-                      </label>
-                      
-                      <label>
-                        <input
-                          type="checkbox"
-                          name="showForCustomer"
-                          checked={editingPopupNode.showForCustomer !== false}
-                          onChange={(e) => {
-                            const { name, checked } = e.target;
-                            // 更新當前節點狀態
-                            setEditingPopupNode(prev => ({ ...prev, [name]: checked }));
-                            
-                            // 更新所有節點，包括級聯更新子元素
-                            if (editingPopupNode.type === "phase") {
-                              // 使用現有的 handleEditChange 函數來級聯更新子元素
-                              const event = { target: { name, value: checked } };
-                              setSelectedNodeId(editingPopupNode.id);
-                              handleEditChange(event);
-                            } else {
-                              // 非 phase 節點只更新自己
-                              setNodes(prevNodes => {
-                                const newNodes = prevNodes.map(n => 
-                                  n.id === editingPopupNode.id ? { ...n, [name]: checked } : n
-                                );
-                                setHasUnsavedChanges(true);
-                                return newNodes;
-                              });
-                            }
-                            autoSave();
-                          }}
-                        />
-                        顧客可見
-                      </label>
-                    </div>
+                  <div>
+                    <label>Extras (comma-separated):</label>
+                    <input
+                      name="extras"
+                      value={(selectedNode.extras || []).join(",")}
+                      onChange={(e) => {
+                        const arr = e.target.value.split(",").map(s => s.trim()).filter(s => s);
+                        handleEditChange({ target: { name: "extras", value: arr } });
+                      }}
+                      className="form-control"
+                    />
                   </div>
-                  
-                  <div className="popup-actions">
-                    <button 
-                      onClick={closePopup}
-                      className="popup-done-btn"
-                    >
-                      完成
-                    </button>
+                  <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
+                    <label style={{ marginBottom: "0" }}>
+                      <input
+                        type="checkbox"
+                        name="showInFlowchart"
+                        checked={selectedNode.showInFlowchart !== false}
+                        onChange={(e) => handleEditChange({ 
+                          target: { name: "showInFlowchart", value: e.target.checked } 
+                        })}
+                      />
+                      {" "} Show in Flowchart
+                    </label>
+                    <label style={{ marginBottom: "0" }}>
+                      <input
+                        type="checkbox"
+                        name="showForCustomer"
+                        checked={selectedNode.showForCustomer !== false}
+                        onChange={(e) => handleEditChange({ 
+                          target: { name: "showForCustomer", value: e.target.checked } 
+                        })}
+                      />
+                      {" "} Show for Customer
+                    </label>
+                  </div>
+                  <div style={{ marginTop: "10px" }}>
+                    <button onClick={handleDeleteNode} className="yuniver-btn danger">Delete Node</button>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-          
-          {/* 原先的屬性面板已移至彈窗 */}
+          )}
         </div>
       </div>
     </div>

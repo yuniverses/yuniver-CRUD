@@ -75,3 +75,27 @@ export const updateDocument = async (fileId, content, token) => {
   );
   return res.data;
 };
+
+// 新增外部連結
+export const addExternalLink = async (pageId, linkData, token) => {
+  const res = await axios.post(
+    `${API_URL}/files/link`,
+    { pageId, ...linkData },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  return res.data;
+};
+
+// 更新外部連結
+export const updateExternalLink = async (linkId, linkData, token) => {
+  const res = await axios.put(
+    `${API_URL}/files/link/${linkId}`,
+    linkData,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  return res.data;
+};

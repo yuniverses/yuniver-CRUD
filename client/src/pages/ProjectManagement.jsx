@@ -245,33 +245,113 @@ const ProjectFlowchartEditor = ({ project, token, updateProjectFlowchart, taskFi
     }));
   };
 
-  // 移動 Phase 排序（上下箭頭）
+  // 移動 Phase 排序（上下箭頭）- 支援巢狀結構
   const movePhase = (phaseId, direction) => {
     setHasChanged(true);
     setNodes(prevNodes => {
-      const phases = prevNodes.filter(n => n.type === 'phase');
-      const others = prevNodes.filter(n => n.type !== 'phase');
-      const index = phases.findIndex(p => p.id === phaseId);
+      // 找到目標 Phase
+      const targetPhase = prevNodes.find(n => n.id === phaseId);
+      if (!targetPhase) return prevNodes;
+      
+      // 獲取同一層級的 Phase 節點（相同的父節點）
+      let siblingPhases = prevNodes.filter(n => 
+        n.type === 'phase' && 
+        String(n.containerId) === String(targetPhase.containerId)
+      );
+      
+      // 對同層級的 Phases 添加排序屬性（如果沒有）
+      siblingPhases = siblingPhases.map((phase, idx) => {
+        if (phase.sortOrder === undefined) {
+          return { ...phase, sortOrder: idx * 10 }; // 使用10的倍數方便插入
+        }
+        return phase;
+      });
+      
+      // 根據排序屬性排序
+      siblingPhases.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      
+      // 找出目標 Phase 在排序後的陣列中的索引
+      const index = siblingPhases.findIndex(p => p.id === phaseId);
       if (index === -1) return prevNodes;
+      
+      // 計算新索引
       const newIndex = index + (direction === 'up' ? -1 : 1);
-      if (newIndex < 0 || newIndex >= phases.length) return prevNodes;
-      [phases[index], phases[newIndex]] = [phases[newIndex], phases[index]];
-      return [...phases, ...others];
+      
+      // 確保新索引在有效範圍內
+      if (newIndex < 0 || newIndex >= siblingPhases.length) return prevNodes;
+      
+      // 獲取要交換的兩個元素
+      const currentElement = siblingPhases[index];
+      const swapElement = siblingPhases[newIndex];
+      
+      // 交換排序值
+      const currentSortOrder = currentElement.sortOrder || index * 10;
+      const swapSortOrder = swapElement.sortOrder || newIndex * 10;
+      
+      // 使用交換後的排序值創建更新的節點陣列
+      return prevNodes.map(node => {
+        if (node.id === currentElement.id) {
+          return { ...node, sortOrder: swapSortOrder };
+        } else if (node.id === swapElement.id) {
+          return { ...node, sortOrder: currentSortOrder };
+        }
+        return node;
+      });
     });
-  };
+  }
 
   // 移動 Task 排序（僅針對屬於同一 Phase 的 Task）
   const moveTask = (taskId, phaseId, direction) => {
     setHasChanged(true);
     setNodes(prevNodes => {
-      const tasks = prevNodes.filter(n => n.type === 'task' && String(n.containerId) === String(phaseId));
-      const others = prevNodes.filter(n => !(n.type === 'task' && String(n.containerId) === String(phaseId)));
-      const index = tasks.findIndex(t => t.id === taskId);
+      // 找到目標 Task
+      const targetTask = prevNodes.find(n => n.id === taskId);
+      if (!targetTask) return prevNodes;
+      
+      // 獲取同一 Phase 下的所有 Task 節點
+      let siblingTasks = prevNodes.filter(n => 
+        n.type === 'task' && 
+        String(n.containerId) === String(phaseId)
+      );
+      
+      // 對同一 Phase 下的 Tasks 添加排序屬性（如果沒有）
+      siblingTasks = siblingTasks.map((task, idx) => {
+        if (task.sortOrder === undefined) {
+          return { ...task, sortOrder: idx * 10 }; // 使用10的倍數方便插入
+        }
+        return task;
+      });
+      
+      // 根據排序屬性排序
+      siblingTasks.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      
+      // 找出目標 Task 在排序後的陣列中的索引
+      const index = siblingTasks.findIndex(t => t.id === taskId);
       if (index === -1) return prevNodes;
+      
+      // 計算新索引
       const newIndex = index + (direction === 'up' ? -1 : 1);
-      if (newIndex < 0 || newIndex >= tasks.length) return prevNodes;
-      [tasks[index], tasks[newIndex]] = [tasks[newIndex], tasks[index]];
-      return [...others, ...tasks];
+      
+      // 確保新索引在有效範圍內
+      if (newIndex < 0 || newIndex >= siblingTasks.length) return prevNodes;
+      
+      // 獲取要交換的兩個元素
+      const currentElement = siblingTasks[index];
+      const swapElement = siblingTasks[newIndex];
+      
+      // 交換排序值
+      const currentSortOrder = currentElement.sortOrder || index * 10;
+      const swapSortOrder = swapElement.sortOrder || newIndex * 10;
+      
+      // 使用交換後的排序值創建更新的節點陣列
+      return prevNodes.map(node => {
+        if (node.id === currentElement.id) {
+          return { ...node, sortOrder: swapSortOrder };
+        } else if (node.id === swapElement.id) {
+          return { ...node, sortOrder: currentSortOrder };
+        }
+        return node;
+      });
     });
   };
 
@@ -296,24 +376,249 @@ const ProjectFlowchartEditor = ({ project, token, updateProjectFlowchart, taskFi
 
   // 以表格呈現 List View
   const renderListView = () => {
-    const phases = filteredNodes.filter(n => n.type === "phase");
+    // 取出未指定 container 的 Phase 節點（頂層 Phase），並按照排序屬性排序
+    const topLevelPhases = [...filteredNodes.filter(n => n.type === "phase" && !n.containerId)]
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     const tasks = filteredNodes.filter(n => n.type === "task");
     const unassignedTasks = tasks.filter(task => !task.containerId);
+    // 其他未分類的元素（非Phase, 非Task, 且無容器）
+    const unassignedOthers = filteredNodes.filter(n => 
+      n.type !== "phase" && n.type !== "task" && 
+      n.type !== "arrow" && !n.containerId
+    );
 
     // 顯示進行中任務時檢查該 Phase 下是否有進行中的任務
     const phaseHasVisibleTasks = (phaseId) => {
       if (taskFilter === 'all') return true;
       
       return nodes.some(node => 
-        node.type === 'task' && 
-        String(node.containerId) === String(phaseId) && 
-        node.status === '進行中'
+        (node.type === 'task' && 
+         String(node.containerId) === String(phaseId) && 
+         node.status === '進行中') ||
+        // 檢查子 Phase 中是否有進行中的任務
+        (node.type === 'phase' && 
+         String(node.containerId) === String(phaseId) && 
+         phaseHasVisibleTasks(node.id))
+      );
+    };
+
+    // 遞迴渲染 Phase 及其子項目（包含巢狀 Phase）
+    const renderPhaseWithChildren = (phase, indentLevel = 0) => {
+      const paddingLeft = indentLevel * 20;
+      const bgColor = indentLevel % 2 === 0 ? "" : "nested-phase";
+      
+      // 檢查是否需要顯示該 Phase
+      if (taskFilter !== 'all' && !phaseHasVisibleTasks(phase.id)) {
+        return null;
+      }
+      
+      return (
+        <React.Fragment key={phase.id}>
+          <tr className={`phase-row status-${phase.status === "未開始" ? "pending" : phase.status === "規劃中" ? "planning" : phase.status === "進行中" ? "in-progress" : phase.status === "已完成" ? "completed" : "custom"} ${bgColor}`}>
+            <td style={{ paddingLeft: `${paddingLeft}px` }}>
+              <span onClick={() => toggleCollapse(phase.id)} className="yuniver-phase-toggle">
+                {collapsedPhases[phase.id] ? "△" : "▽"}
+              </span>
+              Phase {indentLevel > 0 ? `(層級${indentLevel})` : ""}
+            </td>
+            <td>
+              <input
+                type="text"
+                value={phase.label}
+                onChange={(e) => updateNode(phase.id, "label", e.target.value)}
+                className="form-control"
+              />
+            </td>
+            <td>
+              <input
+                type="text"
+                value={phase.description}
+                onChange={(e) => updateNode(phase.id, "description", e.target.value)}
+                className="form-control"
+              />
+            </td>
+            <td>
+              <input
+                type="text"
+                value={phase.link || ""}
+                onChange={(e) => updateNode(phase.id, "link", e.target.value)}
+                className="form-control"
+              />
+            </td>
+            <td>
+              <select
+                value={phase.status}
+                onChange={(e) => updateNode(phase.id, "status", e.target.value)}
+                className="form-control"
+              >
+                <option value="未開始">未開始</option>
+                <option value="規劃中">規劃中</option>
+                <option value="進行中">進行中</option>
+                <option value="已完成">已完成</option>
+                <option value="自訂">自訂</option>
+              </select>
+            </td>
+            <td>
+              <button 
+                onClick={() => movePhase(phase.id, "up")}
+                className="yuniver-btn secondary btn-move"
+              >↑</button>
+              <button 
+                onClick={() => movePhase(phase.id, "down")}
+                className="yuniver-btn secondary btn-move"
+              >↓</button>
+            </td>
+            <td style={{ textAlign: "center" }}>
+              <input
+                type="checkbox"
+                checked={phase.showInFlowchart !== false}
+                onChange={(e) => updateNode(phase.id, "showInFlowchart", e.target.checked)}
+              />
+            </td>
+          </tr>
+          
+          {/* 若 Phase 沒有摺疊，則列出其子項目 */}
+          {!collapsedPhases[phase.id] && (
+            <>
+              {/* 先渲染該 Phase 包含的子 Phase */}
+              {[...nodes.filter(n => n.type === "phase" && String(n.containerId) === String(phase.id))]
+                .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))  // 按照排序屬性排序
+                .map(childPhase => renderPhaseWithChildren(childPhase, indentLevel + 1))
+              }
+              
+              {/* 再渲染該 Phase 包含的 Task */}
+              {[...nodes.filter(n => 
+                  n.type === "task" && 
+                  String(n.containerId) === String(phase.id) &&
+                  (taskFilter === 'all' || n.status === '進行中')
+                )]
+                .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))  // 按照排序屬性排序
+                .map(task => (
+                  <tr key={task.id} className={`task-row status-${task.status === "未開始" ? "pending" : task.status === "規劃中" ? "planning" : task.status === "進行中" ? "in-progress" : task.status === "已完成" ? "completed" : "custom"}`}>
+                    <td style={{ paddingLeft: `${paddingLeft + 20}px` }}>Task</td>
+                    <td>
+                      <input
+                        type="text"
+                        value={task.label}
+                        onChange={(e) => updateNode(task.id, "label", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={task.description}
+                        onChange={(e) => updateNode(task.id, "description", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={task.link || ""}
+                        onChange={(e) => updateNode(task.id, "link", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      <select
+                        value={task.status}
+                        onChange={(e) => updateNode(task.id, "status", e.target.value)}
+                        className="form-control"
+                      >
+                        <option value="未開始">未開始</option>
+                        <option value="規劃中">規劃中</option>
+                        <option value="進行中">進行中</option>
+                        <option value="已完成">已完成</option>
+                        <option value="自訂">自訂</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button 
+                        onClick={() => moveTask(task.id, phase.id, "up")}
+                        className="yuniver-btn secondary btn-move"
+                      >↑</button>
+                      <button 
+                        onClick={() => moveTask(task.id, phase.id, "down")}
+                        className="yuniver-btn secondary btn-move"
+                      >↓</button>
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={task.showInFlowchart !== false}
+                        onChange={(e) => updateNode(task.id, "showInFlowchart", e.target.checked)}
+                      />
+                    </td>
+                  </tr>
+                ))
+              }
+              
+              {/* 最後渲染其他類型的子元素 (subFlow, iterative, note, extra) */}
+              {nodes
+                .filter(n => 
+                  n.type !== "phase" && n.type !== "task" && n.type !== "arrow" && 
+                  String(n.containerId) === String(phase.id) &&
+                  (taskFilter === 'all')
+                )
+                .map(otherNode => (
+                  <tr key={otherNode.id} className="other-element-row">
+                    <td style={{ paddingLeft: `${paddingLeft + 20}px` }}>{otherNode.type}</td>
+                    <td>
+                      <input
+                        type="text"
+                        value={otherNode.label || ""}
+                        onChange={(e) => updateNode(otherNode.id, "label", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={otherNode.description || ""}
+                        onChange={(e) => updateNode(otherNode.id, "description", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={otherNode.link || ""}
+                        onChange={(e) => updateNode(otherNode.id, "link", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      {otherNode.status !== undefined ? (
+                        <input
+                          type="text"
+                          value={otherNode.status || ""}
+                          onChange={(e) => updateNode(otherNode.id, "status", e.target.value)}
+                          className="form-control"
+                        />
+                      ) : <span>-</span>}
+                    </td>
+                    <td>
+                      {/* 其他元素暫無排序功能 */}
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={otherNode.showInFlowchart !== false}
+                        onChange={(e) => updateNode(otherNode.id, "showInFlowchart", e.target.checked)}
+                      />
+                    </td>
+                  </tr>
+                ))
+              }
+            </>
+          )}
+        </React.Fragment>
       );
     };
 
     return (
       <div>
-
         <table className="yuniver-table">
           <thead>
             <tr>
@@ -327,151 +632,15 @@ const ProjectFlowchartEditor = ({ project, token, updateProjectFlowchart, taskFi
             </tr>
           </thead>
           <tbody>
-            {phases.map(phase => (
-              <React.Fragment key={phase.id}>
-                {/* 只有在 phase 下有可見的任務時才顯示該 phase，或者在顯示所有時 */}
-                {(taskFilter === 'all' || phaseHasVisibleTasks(phase.id)) && (
-                  <tr className={`phase-row status-${phase.status === "未開始" ? "pending" : phase.status === "規劃中" ? "planning" : phase.status === "進行中" ? "in-progress" : phase.status === "已完成" ? "completed" : "custom"}`}>
-                    <td>
-                      <span onClick={() => toggleCollapse(phase.id)} className="yuniver-phase-toggle">
-                        {collapsedPhases[phase.id] ? "△" : "▽"}
-                      </span>
-                      Phase
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        value={phase.label}
-                        onChange={(e) => updateNode(phase.id, "label", e.target.value)}
-                        className="form-control"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        value={phase.description}
-                        onChange={(e) => updateNode(phase.id, "description", e.target.value)}
-                        className="form-control"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        value={phase.link || ""}
-                        onChange={(e) => updateNode(phase.id, "link", e.target.value)}
-                        className="form-control"
-                      />
-                    </td>
-                    <td>
-                      <select
-                        value={phase.status}
-                        onChange={(e) => updateNode(phase.id, "status", e.target.value)}
-                        className="form-control"
-                      >
-                        <option value="未開始">未開始</option>
-                        <option value="規劃中">規劃中</option>
-                        <option value="進行中">進行中</option>
-                        <option value="已完成">已完成</option>
-                        <option value="自訂">自訂</option>
-                      </select>
-                    </td>
-                    <td>
-                      <button 
-                        onClick={() => movePhase(phase.id, "up")}
-                        className="yuniver-btn secondary btn-move"
-                      >↑</button>
-                      <button 
-                        onClick={() => movePhase(phase.id, "down")}
-                        className="yuniver-btn secondary btn-move"
-                      >↓</button>
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      <input
-                        type="checkbox"
-                        checked={phase.showInFlowchart !== false}
-                        onChange={(e) => updateNode(phase.id, "showInFlowchart", e.target.checked)}
-                      />
-                    </td>
-                  </tr>
-                )}
-                {!collapsedPhases[phase.id] && (taskFilter === 'all' || phaseHasVisibleTasks(phase.id)) &&
-                  nodes // 注意這裡使用 nodes 而不是 filteredNodes 來確保我們獲取所有節點
-                    .filter(task => 
-                      task.type === 'task' && 
-                      String(task.containerId) === String(phase.id) && 
-                      (taskFilter === 'all' || task.status === '進行中')
-                    )
-                    .map(task => (
-                      <tr key={task.id} className={`task-row status-${task.status === "未開始" ? "pending" : task.status === "規劃中" ? "planning" : task.status === "進行中" ? "in-progress" : task.status === "已完成" ? "completed" : "custom"}`}>
-                        <td style={{ paddingLeft: "30px" }}>Task</td>
-                        <td>
-                          <input
-                            type="text"
-                            value={task.label}
-                            onChange={(e) => updateNode(task.id, "label", e.target.value)}
-                            className="form-control"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={task.description}
-                            onChange={(e) => updateNode(task.id, "description", e.target.value)}
-                            className="form-control"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={task.link || ""}
-                            onChange={(e) => updateNode(task.id, "link", e.target.value)}
-                            className="form-control"
-                          />
-                        </td>
-                        <td>
-                          <select
-                            value={task.status}
-                            onChange={(e) => updateNode(task.id, "status", e.target.value)}
-                            className="form-control"
-                          >
-                            <option value="未開始">未開始</option>
-                            <option value="規劃中">規劃中</option>
-                            <option value="進行中">進行中</option>
-                            <option value="已完成">已完成</option>
-                            <option value="自訂">自訂</option>
-                          </select>
-                        </td>
-                        <td>
-                          <button 
-                            onClick={() => moveTask(task.id, phase.id, "up")}
-                            className="yuniver-btn secondary btn-move"
-                          >↑</button>
-                          <button 
-                            onClick={() => moveTask(task.id, phase.id, "down")}
-                            className="yuniver-btn secondary btn-move"
-                          >↓</button>
-                        </td>
-                        <td style={{ textAlign: "center" }}>
-                          <input
-                            type="checkbox"
-                            checked={task.showInFlowchart !== false}
-                            onChange={(e) => updateNode(task.id, "showInFlowchart", e.target.checked)}
-                          />
-                        </td>
-                      </tr>
-                    ))}
-              </React.Fragment>
-            ))}
+            {/* 渲染頂層 Phase 及其所有子項目 */}
+            {topLevelPhases.map(phase => renderPhaseWithChildren(phase))}
+            
+            {/* 顯示未歸屬於任何 Phase 的 Task */}
             {unassignedTasks.length > 0 && (
               <>
-                {/* <tr>
-                  <td colSpan="7" style={{ backgroundColor: "#e9e9e9", fontWeight: "bold", padding: "8px 15px" }}>
-                    未分配任務
-                  </td>
-                </tr> */}
                 {unassignedTasks.map(task => (
                   <tr key={task.id} className={`task-row status-${task.status === "未開始" ? "pending" : task.status === "規劃中" ? "planning" : task.status === "進行中" ? "in-progress" : task.status === "已完成" ? "completed" : "custom"}`}>
-                    <td>Task</td>
+                    <td>Task (未分組)</td>
                     <td>
                       <input
                         type="text"
@@ -515,6 +684,61 @@ const ProjectFlowchartEditor = ({ project, token, updateProjectFlowchart, taskFi
                         type="checkbox"
                         checked={task.showInFlowchart !== false}
                         onChange={(e) => updateNode(task.id, "showInFlowchart", e.target.checked)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </>
+            )}
+            
+            {/* 顯示其他未分類的元素 */}
+            {unassignedOthers.length > 0 && taskFilter === 'all' && (
+              <>
+                {unassignedOthers.map(node => (
+                  <tr key={node.id} className="other-element-row">
+                    <td>{node.type} (未分組)</td>
+                    <td>
+                      <input
+                        type="text"
+                        value={node.label || ""}
+                        onChange={(e) => updateNode(node.id, "label", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={node.description || ""}
+                        onChange={(e) => updateNode(node.id, "description", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={node.link || ""}
+                        onChange={(e) => updateNode(node.id, "link", e.target.value)}
+                        className="form-control"
+                      />
+                    </td>
+                    <td>
+                      {node.status !== undefined ? (
+                        <input
+                          type="text"
+                          value={node.status || ""}
+                          onChange={(e) => updateNode(node.id, "status", e.target.value)}
+                          className="form-control"
+                        />
+                      ) : <span>-</span>}
+                    </td>
+                    <td>
+                      {/* 其他元素暫無排序功能 */}
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={node.showInFlowchart !== false}
+                        onChange={(e) => updateNode(node.id, "showInFlowchart", e.target.checked)}
                       />
                     </td>
                   </tr>
