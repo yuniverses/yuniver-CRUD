@@ -1,0 +1,628 @@
+{
+  "name": "設計模版1",
+  "flowChart": [
+    {
+      "id": "1742286979497",
+      "type": "phase",
+      "label": "接觸階段",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [
+        "1742292813019",
+        "1742287009718",
+        "1742286996700"
+      ],
+      "containerId": null,
+      "position": {
+        "x": 35,
+        "y": 6
+      },
+      "size": {
+        "width": 304,
+        "height": 151
+      },
+      "status": "進行中",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true,
+      "sortOrder": 0
+    },
+    {
+      "id": "1742287050563",
+      "type": "phase",
+      "label": "需求分析階段",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [
+        "1742287132791",
+        "1742287084156",
+        "1742287107447",
+        "1742287096210"
+      ],
+      "containerId": null,
+      "position": {
+        "x": 417,
+        "y": 6
+      },
+      "size": {
+        "width": 461,
+        "height": 155
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true,
+      "sortOrder": 20
+    },
+    {
+      "id": "1742287177232",
+      "type": "phase",
+      "label": "設計階段",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [
+        "1742288166146",
+        "1742289247780",
+        "1742288239272",
+        "1742287470213",
+        "1742287384521",
+        "1742288266298",
+        "1742287430567",
+        "1742287445248"
+      ],
+      "containerId": null,
+      "position": {
+        "x": 36,
+        "y": 172
+      },
+      "size": {
+        "width": 1070,
+        "height": 283
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true,
+      "sortOrder": 10
+    },
+    {
+      "id": "arrow_1742287027860",
+      "type": "arrow",
+      "label": "Arrow",
+      "points": [
+        {
+          "x": 10,
+          "y": 40
+        },
+        {
+          "x": 59,
+          "y": 40
+        }
+      ],
+      "position": {
+        "x": 341,
+        "y": 42
+      },
+      "size": {
+        "width": 71,
+        "height": 78
+      },
+      "showInFlowchart": true,
+      "containerId": null,
+      "children": [],
+      "showForCustomer": true
+    },
+    {
+      "id": "1742287084156",
+      "type": "task",
+      "label": "需求收集和分析",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742287050563",
+      "position": {
+        "x": 431,
+        "y": 68
+      },
+      "size": {
+        "width": 140,
+        "height": 80
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true,
+      "important": false
+    },
+    {
+      "id": "1742287096210",
+      "type": "task",
+      "label": "初步概念及共識討論",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742287050563",
+      "position": {
+        "x": 582,
+        "y": 70
+      },
+      "size": {
+        "width": 140,
+        "height": 80
+      },
+      "status": "規劃中",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true
+    },
+    {
+      "id": "1742287107447",
+      "type": "task",
+      "label": "報價",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742287050563",
+      "position": {
+        "x": 728,
+        "y": 69
+      },
+      "size": {
+        "width": 140,
+        "height": 80
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true
+    },
+    {
+      "id": "1742287132791",
+      "type": "task",
+      "label": "(內)初步設計策略",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742287050563",
+      "position": {
+        "x": 451,
+        "y": -17
+      },
+      "size": {
+        "width": 140,
+        "height": 80
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": false,
+      "showForCustomer": false
+    },
+    {
+      "id": "1742287159341",
+      "type": "task",
+      "label": "實地考察",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742289247780",
+      "position": {
+        "x": 61,
+        "y": 263
+      },
+      "size": {
+        "width": 140,
+        "height": 54
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true
+    },
+    {
+      "id": "1742287304955",
+      "type": "task",
+      "label": "服務藍圖",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742289247780",
+      "position": {
+        "x": 60,
+        "y": 385
+      },
+      "size": {
+        "width": 141,
+        "height": 49
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true
+    },
+    {
+      "id": "1742287347759",
+      "type": "task",
+      "label": "設計分析",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742289247780",
+      "position": {
+        "x": 61,
+        "y": 323
+      },
+      "size": {
+        "width": 139,
+        "height": 56
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true
+    },
+    {
+      "id": "1742288348585",
+      "type": "phase",
+      "label": "反饋與交付階段",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [
+        "1742288442787",
+        "1742288370788"
+      ],
+      "containerId": null,
+      "position": {
+        "x": 101,
+        "y": 470
+      },
+      "size": {
+        "width": 326,
+        "height": 150
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true,
+      "sortOrder": 30
+    },
+    {
+      "id": "1742288370788",
+      "type": "task",
+      "label": "交付項目成果",
+      "description": "設計說明文件",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742288348585",
+      "position": {
+        "x": 118,
+        "y": 528
+      },
+      "size": {
+        "width": 140,
+        "height": 80
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true
+    },
+    {
+      "id": "1742288442787",
+      "type": "task",
+      "label": "業務培訓",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742288348585",
+      "position": {
+        "x": 269,
+        "y": 528
+      },
+      "size": {
+        "width": 140,
+        "height": 80
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true
+    },
+    {
+      "id": "arrow_1742288475392",
+      "type": "arrow",
+      "label": "Arrow",
+      "points": [
+        {
+          "x": 10,
+          "y": 40
+        },
+        {
+          "x": 34.5,
+          "y": 40
+        },
+        {
+          "x": 59,
+          "y": 40
+        }
+      ],
+      "position": {
+        "x": 882,
+        "y": 41
+      },
+      "size": {
+        "width": 70,
+        "height": 76
+      },
+      "showInFlowchart": true,
+      "containerId": null,
+      "children": [],
+      "showForCustomer": true
+    },
+    {
+      "id": "arrow_1742288505991",
+      "type": "arrow",
+      "label": "Arrow",
+      "points": [
+        {
+          "x": 10,
+          "y": 40
+        },
+        {
+          "x": 58,
+          "y": 40
+        }
+      ],
+      "position": {
+        "x": 27,
+        "y": 460
+      },
+      "size": {
+        "width": 75,
+        "height": 83
+      },
+      "showInFlowchart": true,
+      "containerId": null,
+      "children": [],
+      "showForCustomer": true
+    },
+    {
+      "id": "1742289247780",
+      "type": "phase",
+      "label": "設計研究",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [
+        "1742287159341",
+        "1742287347759",
+        "1742287304955"
+      ],
+      "containerId": "1742287177232",
+      "position": {
+        "x": 48,
+        "y": 214
+      },
+      "size": {
+        "width": 163,
+        "height": 230
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true
+    },
+    {
+      "id": "1742287009718",
+      "type": "task",
+      "label": "初步會議",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742286979497",
+      "position": {
+        "x": 189,
+        "y": 67
+      },
+      "size": {
+        "width": 140,
+        "height": 80
+      },
+      "status": "進行中",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true,
+      "sortOrder": 0
+    },
+    {
+      "id": "1742286996700",
+      "type": "task",
+      "label": "客戶諮詢",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742286979497",
+      "position": {
+        "x": 44,
+        "y": 68
+      },
+      "size": {
+        "width": 140,
+        "height": 80
+      },
+      "status": "已完成",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true,
+      "sortOrder": 10
+    },
+    {
+      "id": "1742287430567",
+      "type": "task",
+      "label": "設計草稿",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742287177232",
+      "position": {
+        "x": 366,
+        "y": 218
+      },
+      "size": {
+        "width": 140,
+        "height": 80
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true
+    },
+    {
+      "id": "1742287384521",
+      "type": "task",
+      "label": "分析結果及設計策略",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742287177232",
+      "position": {
+        "x": 217,
+        "y": 216
+      },
+      "size": {
+        "width": 142,
+        "height": 82
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true
+    },
+    {
+      "id": "1742288239272",
+      "type": "task",
+      "label": "實施及測試階段",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742287177232",
+      "position": {
+        "x": 808,
+        "y": 217
+      },
+      "size": {
+        "width": 140,
+        "height": 80
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true
+    },
+    {
+      "id": "1742287445248",
+      "type": "task",
+      "label": "內部質量控制",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742287177232",
+      "position": {
+        "x": 515,
+        "y": 219
+      },
+      "size": {
+        "width": 140,
+        "height": 80
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true
+    },
+    {
+      "id": "1742287470213",
+      "type": "task",
+      "label": "設計提案",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742287177232",
+      "position": {
+        "x": 664,
+        "y": 219
+      },
+      "size": {
+        "width": 140,
+        "height": 80
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true
+    },
+    {
+      "id": "1742288266298",
+      "type": "task",
+      "label": "設計修改",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": "1742287177232",
+      "position": {
+        "x": 955,
+        "y": 216
+      },
+      "size": {
+        "width": 140,
+        "height": 80
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "showForCustomer": true
+    },
+    {
+      "id": "1742303596163",
+      "type": "task",
+      "label": "客戶關係管理",
+      "description": "",
+      "link": "",
+      "extras": [],
+      "children": [],
+      "containerId": null,
+      "position": {
+        "x": 477,
+        "y": 529
+      },
+      "size": {
+        "width": 140,
+        "height": 80
+      },
+      "status": "未開始",
+      "shape": "rectangle",
+      "showInFlowchart": true,
+      "important": false
+    }
+  ]
+}

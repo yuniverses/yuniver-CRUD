@@ -18,11 +18,11 @@ const allowedChildren = {
 // 根據節點狀態設定背景顏色（預設）
 const getStatusColor = (node) => {
   const statusColors = {
-    "已完成": "#d4edda",
-    "進行中": "#cce5ff",
-    "規劃中": "#fff3cd",
-    "未開始": "#e2e3e5",
-    "自訂": "#f8d7da"
+    "已完成": "rgba(116, 207, 98, 0.42)",
+    "進行中": "rgba(255, 102, 0, 0.35)",
+    "規劃中": "rgba(251, 177, 127, 0.22)",
+    "未開始": "rgba(0, 0, 0, 0.08)",
+    "自訂": "#FFFFFF"
   };
   if (node.type === "phase" || node.type === "task") {
     return statusColors[node.status] || statusColors["未開始"];
@@ -848,12 +848,20 @@ const renderHeader = () => (
   <div className="flowchart-controls">
     {!isReadOnly && (
       <>
-        <button onClick={() => setDisplayMode("flowchart")} className={`yuniver-btn ${displayMode === "flowchart" ? "" : "secondary"} yuniver-filter-btn`}>
-          流程圖視圖
-        </button>
-        <button onClick={() => setDisplayMode("list")} className={`yuniver-btn ${displayMode === "list" ? "" : "secondary"} yuniver-filter-btn`}>
-          列表視圖
-        </button>
+        <div className="yuniver-segment">
+          <button 
+            onClick={() => setDisplayMode("flowchart")} 
+            className={`yuniver-segment-btn ${displayMode === "flowchart" ? "active" : ""}`}
+          >
+            流程圖視圖
+          </button>
+          <button 
+            onClick={() => setDisplayMode("list")} 
+            className={`yuniver-segment-btn ${displayMode === "list" ? "active" : ""}`}
+          >
+            列表視圖
+          </button>
+        </div>
         <button onClick={() => handleAddNewNode("task")} className="yuniver-btn secondary yuniver-filter-btn">
           新增任務
         </button>
@@ -1517,7 +1525,7 @@ const moveTask = (taskId, phaseId, direction) => {
         style={{
           position: "relative",
           width: "100%",
-          height: "600px",
+          height: "700px",
           border: "1px solid #e0e0e0",
           backgroundColor: "#fafafa",
           overflow: "auto"  // 允許滾動查看超出範圍的物件
@@ -1627,8 +1635,9 @@ const moveTask = (taskId, phaseId, direction) => {
         top: node.position.y,
         width: node.size.width,
         height: node.size.height,
-        border: selectedNodeId === node.id ? "2px solid red" : "1px solid #333",
+        border: selectedNodeId === node.id ? "2px solid red" : "1px solid rgba(0, 0, 0, 0.1)",
         boxSizing: "border-box",
+        borderRadius: "3px",
         backgroundColor:
           (node.type === "phase" || node.type === "task")
             ? getStatusColor(node)
@@ -1665,21 +1674,16 @@ const moveTask = (taskId, phaseId, direction) => {
 
   return (
     <div className="yuniver-container">
-      <header className="yuniver-header">
-        <div className="yuniver-logo">
-          <h1>YUNIVER <span className="registered-mark">®</span></h1>
-          <p className="subtitle">案件進度流程圖</p>
-        </div>
-      </header>
+
 
       <div className="yuniver-content">
         <div className="main-content">          
           <div className="yuniver-flowchart-container">
-            <div className="yuniver-flowchart-header">
+            <div className="yuniver-flowchart-header" style={{ position: "fixed",paddingLeft:30,left:0, top: 0, zIndex: 990,width: "100%" }}>
               {renderHeader()}
             </div>
             
-            <div className="yuniver-flowchart-content">
+            <div className="yuniver-flowchart-content" style={{ paddingTop: "60px" }}>
               {displayMode === "flowchart" ? renderFlowchartView() : renderListView()}
               
               {/* 編輯彈窗 */}
@@ -1948,3 +1952,7 @@ const moveTask = (taskId, phaseId, direction) => {
 };
 
 export default CustomFlowChartEditor;
+
+
+
+

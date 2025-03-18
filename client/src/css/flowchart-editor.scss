@@ -1,0 +1,593 @@
+// =========================================
+// 流程圖編輯器 - 變數設定
+// =========================================
+
+// 顏色變數
+$color-white: #ffffff;
+$color-black: #333333;
+$color-gray-light: #f5f5f5;
+$color-gray-medium: #e0e0e0;
+$color-gray-dark: #cccccc;
+$color-primary: #4a76a8;
+$color-primary-light: rgba($color-primary, 0.1);
+$color-primary-dark: #3a5d84;
+$color-success: #4CAF50;
+$color-success-dark: #45a049;
+
+// 狀態顏色
+$status-not-started-bg: #e2e3e5;
+$status-not-started-color: #333;
+$status-planning-bg: #fff3cd;
+$status-planning-color: #856404;
+$status-in-progress-bg: #cce5ff;
+$status-in-progress-color: #004085;
+$status-completed-bg: #d4edda;
+$status-completed-color: #155724;
+$status-custom-bg: #f8d7da;
+$status-custom-color: #721c24;
+
+// 尺寸變數
+$border-radius: 4px;
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+$shadow-md: 0 4px 20px rgba(0, 0, 0, 0.2);
+$shadow-lg: 0 5px 15px rgba(0, 0, 0, 0.3);
+
+// 動畫時間
+$transition-speed: 0.2s;
+
+// =========================================
+// 流程圖容器樣式
+// =========================================
+
+.yuniver-flowchart-container {
+  background-color: $color-white;
+  border-radius: $border-radius;
+  box-shadow: $shadow-sm;
+  margin-bottom: 20px;
+}
+
+.yuniver-flowchart-header {
+  background-color: $color-gray-light;
+  border-bottom: 1px solid $color-gray-medium;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+}
+
+.yuniver-flowchart-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: normal;
+  color: $color-black;
+  
+  &:hover .project-hover-details {
+    display: block;
+  }
+}
+
+.yuniver-flowchart-content {
+  padding: 0px;
+}
+
+.yuniver-flowchart-view {
+  border-radius: $border-radius;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+// =========================================
+// 節點相關樣式
+// =========================================
+
+.yuniver-node {
+  position: relative;
+  border: 1px solid $color-gray-medium;
+  border-radius: $border-radius;
+  padding: 10px;
+  margin-bottom: 15px;
+  background-color: $color-white;
+}
+
+// 節點狀態樣式
+.yuniver-node-未開始 {
+  border-left: 4px solid $status-not-started-bg;
+}
+
+.yuniver-node-規劃中 {
+  border-left: 4px solid $status-planning-bg;
+}
+
+.yuniver-node-進行中 {
+  border-left: 4px solid $status-in-progress-bg;
+}
+
+.yuniver-node-已完成 {
+  border-left: 4px solid $status-completed-bg;
+}
+
+.yuniver-node-自訂 {
+  border-left: 4px solid $status-custom-bg;
+}
+
+.yuniver-node-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 5px;
+}
+
+.yuniver-node-properties {
+  padding: 15px;
+  margin-bottom: 0;
+  
+  > div {
+    margin-bottom: 10px;
+  }
+  
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: $color-black;
+  }
+  
+  .yuniver-btn {
+    margin-top: 10px;
+  }
+}
+
+// =========================================
+// 階段相關樣式
+// =========================================
+
+.yuniver-phase-toggle {
+  cursor: pointer;
+  user-select: none;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  text-align: center;
+  line-height: 20px;
+  background-color: #f1f1f1;
+  border-radius: 3px;
+  
+  &:hover {
+    background-color: $color-gray-medium;
+  }
+}
+
+// =========================================
+// 任務狀態標籤
+// =========================================
+
+.yuniver-task-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-left: 10px;
+  background-color: $status-not-started-bg;
+  
+  &.未開始 {
+    background-color: $status-not-started-bg;
+    color: $status-not-started-color;
+  }
+  
+  &.規劃中 {
+    background-color: $status-planning-bg;
+    color: $status-planning-color;
+  }
+  
+  &.進行中 {
+    background-color: $status-in-progress-bg;
+    color: $status-in-progress-color;
+  }
+  
+  &.已完成 {
+    background-color: $status-completed-bg;
+    color: $status-completed-color;
+  }
+  
+  &.自訂 {
+    background-color: $status-custom-bg;
+    color: $status-custom-color;
+  }
+}
+
+// =========================================
+// 表格相關樣式
+// =========================================
+
+.yuniver-table {
+  margin-top: 0;
+  
+  tr.phase-row {
+    background-color: $color-gray-light;
+    
+    &.nested-phase {
+      background-color: #e8e8e8;
+    }
+  }
+  
+  tr.task-row td:first-child {
+    padding-left: 30px;
+  }
+  
+  tr.other-element-row {
+    background-color: #f9f9f9;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 6px;
+    border: none;
+    border-bottom: 1px solid transparent;
+    border-radius: 0;
+    margin-bottom: 10px;
+    background-color: transparent;
+    transition: border-color 0.3s;
+    
+    &:focus {
+      outline: none;
+      border-bottom: 1px solid $color-primary;
+      box-shadow: none;
+    }
+  }
+  
+  .btn-move {
+    padding: 3px 8px;
+    font-size: 12px;
+    margin-right: 5px;
+  }
+}
+
+// 表格狀態顏色
+.status-pending {
+  background-color: $status-not-started-bg;
+}
+
+.status-planning {
+  background-color: $status-planning-bg;
+}
+
+.status-in-progress {
+  background-color: $status-in-progress-bg;
+}
+
+.status-completed {
+  background-color: $status-completed-bg;
+}
+
+.status-custom {
+  background-color: $status-custom-bg;
+}
+
+// =========================================
+// 按鈕樣式
+// =========================================
+
+// 公共按鈕樣式
+.yuniver-filter-btn {
+  margin-right: 10px;
+  margin-bottom: 10px;
+}
+
+.yuniver-btn {
+  &.disabled {
+    background-color: $color-gray-dark;
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+
+// 分段按鈕樣式 (Segment Button)
+.yuniver-segment {
+  display: inline-flex;
+  border-radius: $border-radius;
+  overflow: hidden;
+  border: 1px solid $color-gray-medium;
+  margin-right: 10px;
+  margin-bottom: 10px;
+}
+
+.yuniver-segment-btn {
+  background-color: $color-gray-light;
+  color: #555;
+  border: none;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all $transition-speed ease;
+  
+  &:not(:last-child) {
+    border-right: 1px solid $color-gray-medium;
+  }
+  
+  &:hover {
+    background-color: #e8e8e8;
+  }
+  
+  &.active {
+    background-color: $color-black;
+    color: $color-white;
+  }
+}
+
+// =========================================
+// 控制區塊樣式
+// =========================================
+
+.flowchart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.flowchart-header-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+// =========================================
+// 流程圖彈窗樣式
+// =========================================
+
+.flowchart-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.flowchart-modal-content {
+  background-color: $color-white;
+  border-radius: $border-radius;
+  box-shadow: $shadow-md;
+  width: 90%;
+  max-width: 1200px;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.flowchart-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background-color: $color-gray-light;
+  border-bottom: 1px solid $color-gray-medium;
+}
+
+.flowchart-modal-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin: 0;
+}
+
+.flowchart-modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #777;
+  
+  &:hover {
+    color: $color-black;
+  }
+}
+
+.flowchart-modal-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+// =========================================
+// 節點編輯彈窗樣式
+// =========================================
+
+.node-edit-popup {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background-color: $color-white;
+  border: 1px solid #ccc;
+  box-shadow: $shadow-lg;
+  padding: 15px;
+  z-index: 1000;
+  border-radius: $border-radius;
+  width: 300px;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: fadeIn $transition-speed ease-in-out;
+}
+
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+  
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    color: $color-black;
+  }
+}
+
+.popup-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #666;
+  padding: 0;
+  
+  &:hover {
+    color: $color-black;
+  }
+}
+
+.popup-field {
+  margin-bottom: 12px;
+  
+  label {
+    font-weight: 500;
+    font-size: 14px;
+    margin-bottom: 5px;
+    display: block;
+    color: #555;
+  }
+  
+  input,
+  textarea,
+  select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid $color-gray-medium;
+    border-radius: $border-radius;
+    margin-top: 3px;
+    font-size: 14px;
+    transition: border-color $transition-speed;
+    
+    &:focus {
+      outline: none;
+      border-color: $color-primary;
+      box-shadow: 0 0 0 2px $color-primary-light;
+    }
+  }
+  
+  textarea {
+    min-height: 60px;
+    resize: vertical;
+  }
+}
+
+.popup-checkbox {
+  margin-top: 8px;
+  
+  label {
+    display: flex;
+    align-items: center;
+    font-weight: normal;
+  }
+  
+  input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
+  }
+}
+
+.popup-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  
+  label {
+    display: flex;
+    align-items: center;
+    font-weight: normal;
+  }
+  
+  input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
+  }
+}
+
+.popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.popup-done-btn {
+  padding: 6px 15px;
+  background-color: $color-success;
+  color: $color-white;
+  border: none;
+  border-radius: $border-radius;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color $transition-speed;
+  
+  &:hover {
+    background-color: $color-success-dark;
+  }
+}
+
+// =========================================
+// 專案詳細信息 hover 效果
+// =========================================
+
+.project-title {
+  margin: 0 0 15px 0;
+  color: $color-primary;
+  font-weight: bold;
+  padding: 5px 10px;
+  background-color: $color-gray-light;
+  border-radius: $border-radius;
+  border-left: 3px solid $color-primary;
+}
+
+.project-hover-details {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: $color-white;
+  border: 1px solid $color-gray-medium;
+  border-radius: $border-radius;
+  padding: 10px;
+  width: 250px;
+  box-shadow: $shadow-sm;
+  z-index: 10;
+  font-size: 14px;
+}
+
+// =========================================
+// 專案資訊卡片
+// =========================================
+
+.yuniver-project-card {
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: $border-radius;
+  margin-bottom: 15px;
+  
+  p {
+    margin: 0 0 5px 0;
+  }
+  
+  strong {
+    font-weight: bold;
+  }
+}
+
+// =========================================
+// 動畫
+// =========================================
+
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(-10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}

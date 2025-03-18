@@ -1,5 +1,8 @@
 //client/src/css/main.scss
 
+// Import 流程圖編輯器樣式
+@import 'flowchart-editor';
+
 // 主體容器設置
 .yuniver-container {
   display: flex;
