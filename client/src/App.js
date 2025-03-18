@@ -7,6 +7,10 @@ import {
   Navigate,
 } from "react-router-dom";
 
+// Socket Context Provider
+import { SocketProvider } from "./contexts/SocketContext";
+import SocketStatus from "./components/SocketStatus";
+
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import HomePage from "./pages/HomePage";
@@ -47,18 +51,20 @@ function App() {
   const role = getRole(); // 取得用戶角色
 
   return (
-    <Router>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            isAuthenticated() ? (
-              <Navigate to="/home" />
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
-        />
+    <SocketProvider>
+      <Router>
+        <SocketStatus />
+        <Routes>
+          <Route
+            path="/"
+            element={
+              isAuthenticated() ? (
+                <Navigate to="/home" />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
 
         <Route
           path="/login"
@@ -193,7 +199,8 @@ function App() {
 
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-    </Router>
+      </Router>
+    </SocketProvider>
   );
 }
 

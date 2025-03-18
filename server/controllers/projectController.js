@@ -156,16 +156,67 @@ exports.addMessage = async (req, res) => {
     // 獲取發送者用戶名
     const sender = req.user ? req.user.username : 'Unknown User';
     
-    // 添加訊息到專案，確保包含projectId
-    project.messages.push({ message, sender, projectId: project._id });
+    // 處理附件檔案
+    const attachments = [];
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        attachments.push({
+          filename: file.filename,
+          originalname: file.originalname,
+          path: file.path,
+          mimetype: file.mimetype,
+          size: file.size
+        });
+      }
+      console.log(`處理了 ${attachments.length} 個檔案附件`);
+    }
+    
+    // 添加訊息到專案，確保包含projectId和附件
+    const newMessage = { 
+      message, 
+      sender, 
+      projectId: project._id,
+      attachments: attachments,
+      createdAt: new Date()
+    };
+    
+    project.messages.push(newMessage);
     await project.save();
+    
+    // 取得最新訊息的ID (剛添加到陣列中的最後一個訊息)
+    const messageId = project.messages[project.messages.length - 1]._id;
+    
+    // 準備要發送的訊息內容（確保不包含過多的專案資訊）
+    const messageToEmit = {
+      _id: messageId,
+      message: message,
+      sender: sender,
+      attachments: attachments,
+      createdAt: newMessage.createdAt,
+      projectId: project._id,
+      isNew: true // 標記為新訊息
+    };
+    
+    // 使用 Socket.IO 發送新訊息通知
+    const io = req.app.get('io');
+    if (io) {
+      console.log(`透過Socket.IO發送新訊息通知到房間: ${project._id}`);
+      io.to(project._id.toString()).emit('new_message', messageToEmit);
+    } else {
+      console.log('Socket.IO 未初始化，無法發送實時通知');
+    }
     
     // 如果有Discord頻道ID，將訊息同步至Discord
     if (project.discordChannelId) {
       try {
         console.log('專案有Discord頻道ID，嘗試同步訊息:', project.discordChannelId);
         const discordBot = require('../utils/discordBot');
-        const sent = await discordBot.sendMessageToDiscord(project.discordChannelId, sender, message);
+        const sent = await discordBot.sendMessageToDiscord(
+          project.discordChannelId, 
+          sender, 
+          message,
+          attachments
+        );
         console.log('Discord訊息同步結果:', sent ? '成功' : '失敗');
       } catch (discordError) {
         console.error('同步訊息到Discord時發生錯誤:', discordError);
@@ -174,7 +225,7 @@ exports.addMessage = async (req, res) => {
       console.log('專案沒有Discord頻道ID，無法同步訊息');
     }
     
-    res.json({ message: "Message added", project });
+    res.json({ message: "Message added", newMessage: messageToEmit });
   } catch (err) {
     console.error("Add message error:", err);
     res.status(500).json({ message: "Failed to add message" });
@@ -229,6 +280,86 @@ exports.updateProjectSettings = async (req, res) => {
   } catch (error) {
     console.error("Update project settings error:", error);
     res.status(500).json({ message: "Failed to update project settings" });
+  }
+};
+
+// 標記訊息為已讀
+exports.markMessagesAsRead = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    const projectId = req.params.id;
+    const userId = req.user._id;
+    
+    // 找到專案
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+    
+    // 獲取未標記為該用戶已讀的訊息
+    const unreadMessages = project.messages.filter(msg => 
+      !msg.readBy.some(readInfo => readInfo.userId.toString() === userId.toString())
+    );
+    
+    if (unreadMessages.length === 0) {
+      return res.json({ message: "No unread messages", count: 0 });
+    }
+    
+    // 更新所有未讀訊息
+    let updateCount = 0;
+    const now = new Date();
+    
+    for (const msg of unreadMessages) {
+      msg.readBy.push({
+        userId: userId,
+        readAt: now
+      });
+      updateCount++;
+    }
+    
+    // 保存專案
+    await project.save();
+    
+    res.json({
+      message: "Messages marked as read",
+      count: updateCount
+    });
+  } catch (error) {
+    console.error("Mark messages as read error:", error);
+    res.status(500).json({ message: "Failed to mark messages as read" });
+  }
+};
+
+// 獲取未讀訊息數量
+exports.getUnreadMessageCount = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    const projectId = req.params.id;
+    const userId = req.user._id;
+    
+    // 找到專案
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+    
+    // 計算未讀訊息數量
+    const unreadCount = project.messages.filter(msg => 
+      !msg.readBy.some(readInfo => readInfo.userId.toString() === userId.toString())
+    ).length;
+    
+    res.json({
+      unreadCount: unreadCount
+    });
+  } catch (error) {
+    console.error("Get unread message count error:", error);
+    res.status(500).json({ message: "Failed to get unread message count" });
   }
 };
 

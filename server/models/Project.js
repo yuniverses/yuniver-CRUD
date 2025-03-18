@@ -24,7 +24,30 @@ const messageSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  // 可紀錄發送人、對象等
+  // 添加附件支援
+  attachments: [{
+    filename: String,
+    originalname: String,
+    path: String,
+    mimetype: String,
+    size: Number,
+    url: String,
+    isDiscordAttachment: {
+      type: Boolean,
+      default: false
+    }
+  }],
+  // 添加已讀狀態追蹤
+  readBy: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+    readAt: {
+      type: Date,
+      default: Date.now
+    }
+  }]
 });
 
 const taskSchema = new mongoose.Schema({

@@ -1,12 +1,21 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import "../css/main.css";
 import "../css/custom-communication.css";
 import ReactDOM from "react-dom";
+import { useSocket } from "../contexts/SocketContext";
 
-import { getProjectDetails, addNote, deleteNote, addMessage } from "../api/project";
+import { 
+  getProjectDetails, 
+  addNote, 
+  deleteNote, 
+  addMessage, 
+  addMessageWithAttachments,
+  getUnreadMessageCount,
+  markMessagesAsRead
+} from "../api/project";
 import { getPages, createPage, getPageFiles, renamePage, deletePage, updatePagePermissions } from "../api/page";
 import {
   uploadFile,
@@ -59,6 +68,7 @@ function ProjectDetailsWithFiles() {
   const { id } = useParams();
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
+  const { socket, isConnected, joinProjectRoom, leaveProjectRoom } = useSocket();
 
   const [project, setProject] = useState(null);
   const [pages, setPages] = useState([]);
@@ -79,6 +89,10 @@ function ProjectDetailsWithFiles() {
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [selectedPermission, setSelectedPermission] = useState("");
   const [showFlowchartModal, setShowFlowchartModal] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const fileInputRef = useRef(null);
+  const messagesContainerRef = useRef(null);  // 新增 ref 用於訊息容器自動滾動
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   // Get and decode JWT token role information
   const getRole = () => {
@@ -133,7 +147,91 @@ function ProjectDetailsWithFiles() {
   useEffect(() => {
     loadProject();
     loadPages();
+    fetchUnreadMessageCount();
+    
+    return () => {
+      // 當組件卸載時清理訂閱
+      if (socket && id) {
+        leaveProjectRoom(id);
+      }
+    };
   }, [id]);
+  
+  // 處理Socket.IO連接和事件監聽
+  useEffect(() => {
+    if (isConnected && socket && id) {
+      console.log('Socket已連接，正在加入專案房間:', id);
+      
+      // 加入專案房間
+      joinProjectRoom(id);
+      
+      // 監聽新訊息事件
+      socket.on('new_message', (newMessage) => {
+        console.log('收到新訊息:', newMessage);
+        
+        // 如果新訊息屬於當前專案，且不是自己發送的
+        if (newMessage.projectId === id) {
+          // 根據是否顯示通訊模態窗口決定是否增加未讀計數
+          if (!showCommunicationModal || communicationTab !== 'messages') {
+            setUnreadMessageCount(prevCount => prevCount + 1);
+          }
+          
+          // 將新訊息添加到專案訊息列表中
+          setProject(prevProject => {
+            if (!prevProject) return prevProject;
+            
+            // 檢查此訊息是否已經存在於列表中
+            const messageExists = prevProject.messages.some(msg => 
+              msg._id === newMessage._id
+            );
+            
+            if (messageExists) return prevProject;
+            
+            // 確保新訊息有 isNew 標記，用於高亮顯示
+            const enhancedMessage = {
+              ...newMessage,
+              isNew: true // 標記為新訊息，用於動畫效果
+            };
+            
+            // 設置定時器移除新訊息標記 (3秒後)
+            setTimeout(() => {
+              setProject(prevState => {
+                if (!prevState) return prevState;
+                
+                return {
+                  ...prevState,
+                  messages: prevState.messages.map(msg => 
+                    msg._id === enhancedMessage._id ? { ...msg, isNew: false } : msg
+                  )
+                };
+              });
+            }, 3000);
+            
+            return {
+              ...prevProject,
+              messages: [...prevProject.messages, enhancedMessage]
+            };
+          });
+        }
+      });
+      
+      return () => {
+        // 移除事件監聽器，防止內存洩漏
+        socket.off('new_message');
+      };
+    }
+  }, [socket, isConnected, id, showCommunicationModal, communicationTab]);
+  
+  // 訊息自動滾動到底部
+  useEffect(() => {
+    if (messagesContainerRef.current && project?.messages?.length > 0) {
+      // 使用setTimeout確保DOM已更新
+      setTimeout(() => {
+        const container = messagesContainerRef.current;
+        container.scrollTop = container.scrollHeight;
+      }, 50);
+    }
+  }, [project?.messages, showCommunicationModal]);
 
   // Update hover state for each file
   const handleMouseEnter = (fileId) => {
@@ -196,6 +294,26 @@ function ProjectDetailsWithFiles() {
       loadFiles(selectedPage._id);
     }
   }, [selectedPage]);
+  
+  // 獲取未讀訊息數量的函數
+  const fetchUnreadMessageCount = async () => {
+    try {
+      const response = await getUnreadMessageCount(id, token);
+      setUnreadMessageCount(response.unreadCount);
+    } catch (error) {
+      console.error('獲取未讀訊息數量失敗', error);
+    }
+  };
+  
+  // 標記所有訊息為已讀
+  const handleMarkMessagesAsRead = async () => {
+    try {
+      await markMessagesAsRead(id, token);
+      setUnreadMessageCount(0);
+    } catch (error) {
+      console.error('標記訊息為已讀失敗', error);
+    }
+  };
 
   // Load content when a text file is selected
   useEffect(() => {
@@ -428,16 +546,125 @@ function ProjectDetailsWithFiles() {
     }
   };
 
+  // 處理選擇檔案
+  const handleFileSelect = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles([...selectedFiles, ...newFiles]);
+    }
+  };
+  
+  // 移除已選擇的檔案
+  const handleRemoveFile = (index) => {
+    const updatedFiles = [...selectedFiles];
+    updatedFiles.splice(index, 1);
+    setSelectedFiles(updatedFiles);
+  };
+  
   const handleAddMessage = async () => {
-    if (!messageContent.trim()) return;
+    if (!messageContent.trim() && selectedFiles.length === 0) return;
     
     try {
-      await addMessage(id, messageContent, token);
+      console.log("準備發送訊息，檔案數量:", selectedFiles.length);
+      let response;
+      
+      if (selectedFiles.length > 0) {
+        // 直接使用FormData和fetch，避免API函數中的路徑問題
+        console.log("使用直接fetch方式發送帶附件的訊息");
+        
+        // 建立FormData物件
+        const formData = new FormData();
+        formData.append("message", messageContent);
+        
+        // 添加所有選擇的檔案
+        selectedFiles.forEach(file => {
+          formData.append("attachments", file);
+          console.log(`已添加附件: ${file.name}`);
+        });
+        
+        // 使用絕對URL
+        const API_URL = "http://localhost:5001";
+        const url = `${API_URL}/api/projects/${id}/messages`;
+        console.log("發送請求到絕對URL:", url);
+        
+        const fetchResponse = await fetch(url, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          body: formData
+        });
+        
+        // 檢查響應
+        if (!fetchResponse.ok) {
+          const errorText = await fetchResponse.text();
+          console.error("請求失敗:", fetchResponse.status, errorText);
+          throw new Error(`請求失敗: ${fetchResponse.status} ${errorText || "未知錯誤"}`);
+        }
+        
+        response = await fetchResponse.json();
+        console.log("附件訊息發送成功:", response);
+      } else {
+        // 使用常規訊息API函數
+        console.log("使用常規API函數發送純文字訊息");
+        response = await addMessage(id, messageContent, token);
+        console.log("純文字訊息發送成功:", response);
+      }
+      
+      // 清空表單和選擇的檔案
       setMessageContent("");
-      loadProject();
+      setSelectedFiles([]);
+      
+      // 使用Socket.IO時不需要重新加載整個專案
+      // 服務器收到我們的訊息時將通過Socket.IO發送，但為防止任何問題，我們也添加到本地
+      if (response && response.newMessage) {
+        // 將新訊息添加到專案訊息列表中，並標記為新訊息用於動畫效果
+        const enhancedMessage = {
+          ...response.newMessage,
+          isNew: true
+        };
+        
+        setProject(prevProject => {
+          if (!prevProject) return prevProject;
+          
+          // 檢查此訊息是否已經存在於列表中
+          const messageExists = prevProject.messages.some(msg => 
+            msg._id === response.newMessage._id
+          );
+          
+          if (messageExists) return prevProject;
+          
+          return {
+            ...prevProject,
+            messages: [...prevProject.messages, enhancedMessage]
+          };
+        });
+        
+        // 設置定時器移除新訊息標記 (3秒後)
+        setTimeout(() => {
+          setProject(prevState => {
+            if (!prevState) return prevState;
+            
+            return {
+              ...prevState,
+              messages: prevState.messages.map(msg => 
+                msg._id === enhancedMessage._id ? { ...msg, isNew: false } : msg
+              )
+            };
+          });
+        }, 3000);
+        
+        // 確保訊息容器滾動到底部
+        setTimeout(() => {
+          if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+          }
+        }, 50);
+      }
     } catch (err) {
-      console.error(err);
-      alert("發送訊息失敗");
+      console.error("發送訊息錯誤:", err);
+      console.dir(err); // 顯示更詳細的錯誤信息
+      alert(`發送訊息失敗: ${err.message || "未知錯誤"}`);
     }
   };
 
@@ -856,10 +1083,25 @@ function ProjectDetailsWithFiles() {
             )}
             <div className="section-divider"></div>
             <button 
-              className="action-link" 
-              onClick={() => setShowCommunicationModal(true)}
+              className="action-link message-button" 
+              onClick={() => {
+                setShowCommunicationModal(true);
+                // 打開溝通面板時標記訊息為已讀
+                if (unreadMessageCount > 0) {
+                  // 使用API標記訊息為已讀
+                  handleMarkMessagesAsRead();
+                  
+                  // 同時通過Socket.IO通知其他用戶此用戶已讀訊息
+                  if (socket && isConnected) {
+                    socket.emit('mark_messages_read', id);
+                  }
+                }
+              }}
             >
               溝通與訊息
+              {unreadMessageCount > 0 && (
+                <span className="unread-badge">{unreadMessageCount}</span>
+              )}
             </button>
             <button 
               className="action-link" 
@@ -1120,11 +1362,14 @@ function ProjectDetailsWithFiles() {
           <div className="communication-content">
             {/* 訊息標籤內容 */}
             <div className={`tab-content ${communicationTab === 'messages' ? 'active' : ''}`}>
-              <div className="messages-container">
+              <div className="messages-container" ref={messagesContainerRef}>
                 {project.messages && project.messages.length > 0 ? (
                   <ul className="messages-list">
                     {project.messages.map((msg) => (
-                      <li key={msg._id} className="message-item">
+                      <li 
+                        key={msg._id} 
+                        className={`message-item ${msg.isNew ? 'new-message' : ''}`}
+                      >
                         {canDeleteItems && (
                           <div className="item-actions">
                             <button 
@@ -1139,10 +1384,91 @@ function ProjectDetailsWithFiles() {
                         <div className="message-header">
                           <span className="message-sender">{msg.sender || "系統"}</span>
                           <span className="message-date">
-                            {formatDateTime(msg.createdAt)}
+                          {new Date(msg.createdAt).toLocaleString("zh-TW", {
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })}
+                            <span className="timestamp-tooltip">
+                              {new Date(msg.createdAt).toLocaleString("zh-TW", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit"
+                              })}
+                            </span>
                           </span>
                         </div>
                         <span className="message-content">{msg.message}</span>
+                        
+                        {/* 顯示附件 */}
+                        {msg.attachments && msg.attachments.length > 0 && (
+                          <div className="message-attachments">
+                            {msg.attachments.map((attachment, idx) => (
+                              <div className="message-attachment" key={idx}>
+                                {attachment.mimetype && attachment.mimetype.startsWith('image/') ? (
+                                  // 圖片直接預覽 - 移除點擊下載行為
+                                  <div className="attachment-image-container">
+                                    <img 
+                                      src={attachment.isDiscordAttachment ? attachment.url : `http://localhost:5001/uploads/${attachment.filename}`} 
+                                      alt={attachment.originalname || "附件圖片"}
+                                      className="attachment-image-preview"
+                                    />
+                                    <div className="attachment-image-actions">
+                                      <span className="attachment-name">{attachment.originalname || attachment.filename}</span>
+                                      <button 
+                                        className="image-action-btn"
+                                        onClick={() => {
+                                          // 全螢幕查看圖片
+                                          const imgUrl = attachment.isDiscordAttachment ? 
+                                            attachment.url : 
+                                            `http://localhost:5001/uploads/${attachment.filename}`;
+                                          window.open(imgUrl, '_blank');
+                                        }}
+                                        title="全螢幕查看"
+                                      >
+                                        <span>🔍</span>
+                                      </button>
+                                      <button 
+                                        className="image-action-btn"
+                                        onClick={() => {
+                                          // 下載圖片
+                                          if (attachment.isDiscordAttachment) {
+                                            window.open(attachment.url, '_blank');
+                                          } else {
+                                            handleFileDownload(attachment.filename);
+                                          }
+                                        }}
+                                        title="下載圖片"
+                                      >
+                                        <span>💾</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  // 一般檔案
+                                  <div className="attachment-file">
+                                    <button 
+                                      className="download-attachment-btn"
+                                      onClick={() => {
+                                        if (attachment.isDiscordAttachment) {
+                                          window.open(attachment.url, '_blank');
+                                        } else {
+                                          handleFileDownload(attachment.filename);
+                                        }
+                                      }}
+                                    >
+                                      📄 {attachment.originalname || attachment.filename}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -1155,28 +1481,66 @@ function ProjectDetailsWithFiles() {
               </div>
               
               <div className="input-container">
-                <textarea
-                  className="content-input"
-                  placeholder="輸入訊息 (將同步至Discord)"
-                  value={messageContent}
-                  onChange={(e) => setMessageContent(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault(); // 阻止換行
-                      if (messageContent.trim()) handleAddMessage();
-                    }
-                  }}
-                  style={{height: Math.min(120, Math.max(40, messageContent.split('\n').length * 24)) + 'px'}}
-                />
+                <div className="message-input-area">
+                  <textarea
+                    className="content-input"
+                    placeholder="輸入訊息 (將同步至Discord)"
+                    value={messageContent}
+                    onChange={(e) => setMessageContent(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault(); // 阻止換行
+                        if (messageContent.trim() || selectedFiles.length > 0) handleAddMessage();
+                      }
+                    }}
+                    style={{height: Math.min(120, Math.max(40, messageContent.split('\n').length * 24)) + 'px'}}
+                  />
+                  
+                  {/* 檔案預覽區域 */}
+                  {selectedFiles.length > 0 && (
+                    <div className="attachment-previews">
+                      {selectedFiles.map((file, index) => (
+                        <div className="attachment-preview" key={index}>
+                          <span className="attachment-name">{file.name}</span>
+                          <button 
+                            className="remove-attachment" 
+                            onClick={() => handleRemoveFile(index)}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 
                 <div className="input-actions">
-                  <div></div> {/* 留空以對齊右側按鈕 */}
+                  <div className="file-upload">
+                    <input
+                      type="file"
+                      id="message-file-input"
+                      ref={fileInputRef}
+                      onChange={handleFileSelect}
+                      multiple
+                      style={{ display: 'none' }}
+                    />
+                    <button 
+                      className="attach-file-btn" 
+                      onClick={() => fileInputRef.current?.click()}
+                      title="添加圖片或文檔"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"></path></svg>
+                    </button>
+                  </div>
                   
                   <div className="action-buttons">
-                    {messageContent && (
+                    {(messageContent || selectedFiles.length > 0) && (
                       <button 
                         className="cancel-btn"
-                        onClick={() => setMessageContent("")}
+                        onClick={() => {
+                          setMessageContent("");
+                          setSelectedFiles([]);
+                        }}
                       >
                         取消
                       </button>
@@ -1184,7 +1548,7 @@ function ProjectDetailsWithFiles() {
                     <button 
                       className="send-btn"
                       onClick={handleAddMessage}
-                      disabled={!messageContent.trim()}
+                      disabled={!messageContent.trim() && selectedFiles.length === 0}
                     >
                       <span>發送</span>
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg>

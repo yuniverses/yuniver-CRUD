@@ -720,6 +720,7 @@
               .message-header {
                 display: flex;
                 align-items: center;
+                justify-content: space-between;
                 margin-bottom: 8px;
                 
                 .message-sender {
@@ -731,7 +732,6 @@
                 .message-date {
                   font-size: 11px;
                   color: #999;
-                  opacity: 0;
                   transition: opacity 0.2s;
                 }
               }
@@ -1105,7 +1105,6 @@
               .message-date {
                 font-size: 11px;
                 color: #999;
-                opacity: 0;
                 transition: opacity 0.2s;
               }
             }

@@ -58,8 +58,8 @@ function QuotationPage() {
       const options = {
         margin: 10,
         filename: `${clientName || 'YUNIVER'}-報價單.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        image: { type: 'jpeg', quality: 0.99 },
+        html2canvas: { scale: 3, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
@@ -194,8 +194,7 @@ function QuotationPage() {
         </div>
 
         {/* 右側主內容區 */}
-        <div className="main-content">
-          <h2 className="page-title">YUNIVER 報價單產生器</h2>
+        <div className="main-content" style={{ background: "linear-gradient(180deg,rgb(238, 238, 238) 0%, #FFF 50%)" }}>
           
           <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 100px)", minHeight: "297mm" }}>
             {/* 報價單預覽 - 這部分將被轉換為PDF */}
@@ -203,15 +202,13 @@ function QuotationPage() {
               ref={quotationRef} 
               style={{ 
                 backgroundColor: "#fff",
-                border: "1px solid #ddd", 
                 padding: "30px", 
                 borderRadius: "4px",
-                boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
                 marginBottom: "20px",
-                maxWidth: "210mm",
+               width: "calc(100% - 60px)",
                 margin: "0 auto 30px auto",
                 flex: "1 1 auto",
-                overflow: "auto",
+  
                 fontFamily: "'Roboto', sans-serif"
               }}
             >
@@ -248,7 +245,7 @@ function QuotationPage() {
               <div style={{ width: "100%", height: "1px", backgroundColor: "#000", margin: "15px 0" }}></div>
               
               <div style={{ marginBottom: "15px" }}>
-                <div style={{ fontSize: "13px", marginBottom: "3px" }}>Time :</div>
+                <div style={{ fontSize: "13px", marginBottom: "3px" }}>專案區間 :</div>
                 <div style={{ display: "flex", gap: "60px" }}>
                   <div style={{ fontSize: "13px" }}>{timeValues.startDate}</div>
                   <div style={{ fontSize: "13px" }}>{timeValues.midDate}</div>

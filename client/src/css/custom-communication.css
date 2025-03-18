@@ -1,4 +1,246 @@
 /* Additional custom styles for the communication interface */
+
+/* 訊息附件顯示樣式 */
+.message-attachments {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.message-attachment {
+  max-width: 100%;
+}
+
+.attachment-image-container {
+  position: relative;
+  display: block;
+  max-width: 300px;
+  margin: 8px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.attachment-image-preview {
+  display: block;
+  width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  background-color: #f8f8f8;
+  border-radius: 8px 8px 0 0;
+}
+
+.attachment-image-actions {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  background-color: #f0f0f0;
+  border-radius: 0 0 8px 8px;
+}
+
+.attachment-name {
+  flex: 1;
+  margin-right: 8px;
+  font-size: 13px;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.image-action-btn {
+  background: none;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 5px;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+}
+
+.image-action-btn:hover {
+  background-color: #eee;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+/* 預覽圖片的檔案名稱已經在.attachment-name中定義，不需要重複 */
+
+/* 未讀訊息通知樣式 */
+.message-button {
+  position: relative;
+}
+
+.unread-badge {
+  position: absolute;
+  top: 10px;
+  right: -5px;
+  background-color: #e74c3c;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(231, 76, 60, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+  }
+}
+
+/* 訊息日期hover效果 */
+.message-date {
+  font-size: 12px;
+  color: #c3c3c3;
+  margin-left: 8px;
+  cursor: help;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.message-date:hover {
+  color: #333;
+  font-weight: bold;
+  background-color: rgba(0,0,0,0.05);
+  padding: 2px 5px;
+  border-radius: 3px;
+  transform: scale(1.05);
+}
+
+/* 時間戳記工具提示 - 使用data屬性 */
+.message-date .timestamp-tooltip {
+  position: absolute;
+  z-index: 99;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  margin-bottom: 8px;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.message-date .timestamp-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top: 5px solid rgba(0, 0, 0, 0.8);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+}
+
+.message-date:hover .timestamp-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+.attachment-file {
+  display: block;
+}
+
+.download-attachment-btn {
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.download-attachment-btn:hover {
+  background-color: #e0e0e0;
+}
+
+/* 訊息輸入附件區域 */
+.message-input-area {
+  position: relative;
+}
+
+.attachment-previews {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.attachment-preview {
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.remove-attachment {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 12px;
+}
+
+.remove-attachment:hover {
+  color: #ff6b6b;
+}
+
+.file-upload {
+  display: flex;
+  align-items: center;
+}
+
+.attach-file-btn {
+  background: none;
+  border: none;
+  color: #4a76a8;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.attach-file-btn:hover {
+  color: #2c4c6d;
+}
 .communication-modal {
   position: fixed;
   top: 0;
@@ -108,6 +350,27 @@
   padding: 20px;
   overflow-y: auto;
   background-color: #f9f9f9;
+  scroll-behavior: smooth; /* 添加平滑滾動效果 */
+}
+
+/* 新訊息高亮顯示 */
+@keyframes highlightMessage {
+  0% { background-color: rgba(74, 118, 168, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.message-item {
+  position: relative;
+  padding: 12px 15px;
+  margin-bottom: 10px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.message-item.new-message {
+  animation: highlightMessage 2s ease;
 }
 
 .input-container {

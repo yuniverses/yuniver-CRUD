@@ -55,14 +55,63 @@ const handleDiscordMessage = async (message) => {
     const project = await Project.findOne({ discordChannelId: message.channelId });
     if (!project) return;
     
-    // 將Discord訊息保存到專案，確保包含projectId
-    project.messages.push({
+    // 處理訊息附件（如有圖片、文件等）
+    const attachments = [];
+    if (message.attachments && message.attachments.size > 0) {
+      message.attachments.forEach(attachment => {
+        attachments.push({
+          filename: attachment.name || `attachment-${Date.now()}`,
+          originalname: attachment.name || `attachment-${Date.now()}`,
+          url: attachment.url,
+          mimetype: attachment.contentType || 'application/octet-stream',
+          size: attachment.size,
+          isDiscordAttachment: true
+        });
+      });
+      console.log(`處理了 ${attachments.length} 個Discord訊息附件`);
+    }
+    
+    // 建立新訊息物件
+    const newMessage = {
       message: message.content,
       sender: message.author.username,
-      projectId: project._id
-    });
+      projectId: project._id,
+      attachments: attachments,
+      createdAt: new Date()
+    };
     
+    // 將Discord訊息保存到專案
+    project.messages.push(newMessage);
     await project.save();
+    
+    // 取得最新訊息的ID (剛添加到陣列中的最後一個訊息)
+    const messageId = project.messages[project.messages.length - 1]._id;
+    
+    // 準備要透過Socket.IO發送的訊息物件
+    const messageToEmit = {
+      _id: messageId,
+      message: message.content,
+      sender: message.author.username,
+      attachments: attachments,
+      createdAt: newMessage.createdAt,
+      projectId: project._id,
+      isNew: true, // 標記為新訊息
+      fromDiscord: true // 標記為來自Discord的訊息
+    };
+    
+    // 嘗試透過Socket.IO發送新訊息通知
+    try {
+      // 使用全局的io實例
+      if (global.io) {
+        console.log(`透過Socket.IO發送來自Discord的新訊息通知到房間: ${project._id}`);
+        global.io.to(project._id.toString()).emit('new_message', messageToEmit);
+      } else {
+        console.log('全局Socket.IO實例未初始化，無法發送實時通知');
+      }
+    } catch (socketError) {
+      console.error('Socket.IO發送通知時發生錯誤:', socketError);
+    }
+    
     console.log(`Message from Discord saved to project: ${project.projectName}`);
   } catch (error) {
     console.error('Error handling Discord message:', error);
@@ -181,7 +230,7 @@ const createChannelForProject = async (project) => {
 };
 
 // 傳送訊息到Discord頻道
-const sendMessageToDiscord = async (channelId, username, message) => {
+const sendMessageToDiscord = async (channelId, username, message, attachments = []) => {
   try {
     console.log(`嘗試傳送訊息到Discord頻道 ${channelId}，發送者: ${username}`);
     
@@ -193,6 +242,8 @@ const sendMessageToDiscord = async (channelId, username, message) => {
     
     // 獲取頻道
     const channel = client.channels.cache.get(channelId);
+    let targetChannel;
+    
     if (!channel) {
       console.error('Discord channel not found in cache:', channelId);
       
@@ -201,10 +252,7 @@ const sendMessageToDiscord = async (channelId, username, message) => {
         const fetchedChannel = await client.channels.fetch(channelId);
         if (fetchedChannel) {
           console.log('通過fetch獲取到頻道:', fetchedChannel.name);
-          // 發送訊息
-          await fetchedChannel.send(`**${username}**: ${message}`);
-          console.log('訊息已發送到獲取的頻道');
-          return true;
+          targetChannel = fetchedChannel;
         } else {
           console.error('無法獲取頻道');
           return false;
@@ -213,11 +261,44 @@ const sendMessageToDiscord = async (channelId, username, message) => {
         console.error('Fetch頻道失敗:', fetchError);
         return false;
       }
+    } else {
+      targetChannel = channel;
+    }
+    
+    // 處理訊息選項
+    const messageOptions = {
+      content: `**${username}**: ${message}`
+    };
+    
+    // 如果有附件，處理附件
+    if (attachments && attachments.length > 0) {
+      const files = [];
+      
+      for (const attachment of attachments) {
+        // 檢查是本地檔案還是URL
+        if (attachment.path) {
+          // 本地檔案
+          files.push({
+            attachment: attachment.path,
+            name: attachment.originalname || attachment.filename
+          });
+        } else if (attachment.url) {
+          // 遠端URL
+          files.push({
+            attachment: attachment.url,
+            name: attachment.originalname || attachment.filename
+          });
+        }
+      }
+      
+      if (files.length > 0) {
+        messageOptions.files = files;
+      }
     }
     
     // 發送訊息
-    console.log(`發送訊息到頻道 ${channel.name}: **${username}**: ${message}`);
-    await channel.send(`**${username}**: ${message}`);
+    console.log(`發送訊息到頻道 ${targetChannel.name}`, messageOptions);
+    await targetChannel.send(messageOptions);
     console.log('訊息已發送');
     return true;
   } catch (error) {
